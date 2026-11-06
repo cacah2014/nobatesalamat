@@ -1,0 +1,31 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.*
+
+# next.js
+.next/
+out/
+build/
+dist/
+next-env.d.ts
+
+# typescript
+*.tsbuildinfo
+
+# env & secrets
+.env
+.env*.local
+.env.production
+
+# logs & os files
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+
+# misc caches
+.turbo/
+.vercel/
+coverage/
+.arena/

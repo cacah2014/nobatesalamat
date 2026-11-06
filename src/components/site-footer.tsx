@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpLeft, BriefcaseBusiness, Camera, HeartPulse, LockKeyhole, Mail, MapPin, PhoneCall } from "lucide-react";
+import { ArrowUpLeft, BriefcaseBusiness, Camera, FolderTree, HeartPulse, LockKeyhole, Mail, MapPin, PhoneCall } from "lucide-react";
 
 const links = [
   { title: "خدمات", items: ["جست‌وجوی پزشک", "نوبت حضوری", "مشاوره آنلاین", "تخصص‌های پزشکی"] },
@@ -48,6 +48,9 @@ export function SiteFooter() {
         <div className="site-container flex flex-col items-center justify-between gap-3 py-5 text-[11px] text-[#a8c2bf] sm:flex-row">
           <p>© ۱۴۰۵ نوبت سلامت؛ تمام حقوق محفوظ است.</p>
           <div className="flex items-center gap-4">
+            <Link href="/repo" className="flex items-center gap-1 transition hover:text-white">
+              <FolderTree size={12} /> فایل‌های پروژه
+            </Link>
             <Link href="/login" className="flex items-center gap-1 transition hover:text-white">
               <LockKeyhole size={12} /> ورود مدیران
             </Link>
