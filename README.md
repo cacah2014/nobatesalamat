@@ -12,6 +12,41 @@
 - **به‌روزرسانی پروژه** از داخل پنل: `git pull --ff-only` ← Dependency (`composer install`) ← Database (`php artisan migrate --force`) ← Code/Cache ← Update
 - سئوی کامل: Sitemap پویا، Robots، Canonical، Open Graph و JSON-LD (FAQ / Physician / Breadcrumb)
 
+## شروع سریع (ویندوز / EnvKit)
+
+اگر هنگام باز کردن سایت این خطا را دیدید:
+
+```
+Failed opening required '.../vendor/autoload.php'
+Fatal error: Uncaught Error: Failed opening required '.../vendor/autoload.php'
+```
+
+یعنی کد پروژه هست ولی **وابستگی‌های Composer نصب نشده**. یک بار در ریشهٔ پروژه (همان پوشه‌ای که `composer.json` دارد) یکی از این دو را اجرا کنید:
+
+```powershell
+# ویندوز (PowerShell) — نصب کامل + SQLite برای اجرای سریع
+powershell -ExecutionPolicy Bypass -File scripts\install.ps1 -Sqlite -Seed
+```
+
+```bash
+# لینوکس / مک / WSL
+bash scripts/install.sh --sqlite --seed
+```
+
+این اسکریپت `composer install` را اجرا می‌کند، `.env` می‌سازد، `APP_KEY` را تولید می‌کند و (با `--sqlite`) دیتابیس SQLite را می‌سازد و `migrate --seed` می‌زند.
+
+- **با MySQL:** مقادیر `DB_*` را در `.env` بگذارید و اسکریپت را بدون `--sqlite` اجرا کنید، سپس `php artisan migrate --seed`.
+- **بدون اسکریپت:** `composer install` → `copy .env.example .env` → `php artisan key:generate` → `php artisan migrate --seed`.
+- اگر `composer` نصب نیست: <https://getcomposer.org/download/> (یا `winget install Composer`).
+
+**اجرای پروژه با سرور توکار PHP:**
+
+```bash
+php -S 127.0.0.1:8000 -t public server.php     # یا: php artisan serve
+```
+
+در EnvKit هم نقطهٔ ورود همان `public/index.php` است؛ کافی است یک بار پوشهٔ `vendor` ساخته شود (فایل `.gitignore` آن را از گیت خارج کرده، چون باید روی هر ماشین نصب شود).
+
 ## استقرار گام‌به‌گام (VPS یا هاست SSH)
 
 > این ریپو اکنون فقط شامل کد لاراول است و خودِ ریشهٔ پروژه، پروژهٔ لاراول محسوب می‌شود
