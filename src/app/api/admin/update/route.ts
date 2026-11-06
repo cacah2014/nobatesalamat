@@ -1,6 +1,6 @@
 import { execFile, exec as execCallback } from "child_process";
 import { promisify } from "util";
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { updateLogs } from "@/db/schema";
 import { requirePermission } from "@/lib/admin";
@@ -31,7 +31,13 @@ export async function POST() {
   if (updateRunning) return Response.json({ error: "یک فرایند به‌روزرسانی در حال اجراست." }, { status: 409 });
 
   updateRunning = true;
-  const [log] = await db.insert(updateLogs).values({ adminId: admin.id, output: "" }).$returningId();
+  await db.insert(updateLogs).values({ adminId: admin.id, output: "" });
+  const [log] = await db
+    .select({ id: updateLogs.id })
+    .from(updateLogs)
+    .where(eq(updateLogs.adminId, admin.id))
+    .orderBy(desc(updateLogs.startedAt), desc(updateLogs.id))
+    .limit(1);
   const output: string[] = [];
   const save = async (step: string, text: string) => {
     output.push(`\n[${step}]\n${text || "انجام شد"}`);
