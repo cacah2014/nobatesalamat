@@ -6,6 +6,11 @@ use Symfony\Component\Console\Input\ArgvInput;
 
 define('LARAVEL_START', microtime(true));
 
+if (! is_file(__DIR__.'/vendor/autoload.php')) {
+    fwrite(STDERR, "\n[!] پوشهٔ vendor پیدا نشد. ابتدا این دستور را اجرا کنید:\n    composer install\n\n");
+    exit(1);
+}
+
 // Register the Composer autoloader...
 require __DIR__.'/vendor/autoload.php';
 
