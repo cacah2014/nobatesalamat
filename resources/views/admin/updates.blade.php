@@ -7,7 +7,13 @@
         <span class="grid size-12 shrink-0 place-items-center rounded-2xl bg-[#e9f8f4] text-lg text-brand">♻</span>
         <div>
             <h2 class="text-sm font-black">به‌روزرسانی امن از مخزن Git</h2>
-            <p class="mt-1 text-[10px] leading-6 text-[#718784]">پیش از هر مرحله، دستور <code dir="ltr" class="rounded bg-[#edf2f1] px-1">git pull --ff-only</code> اجرا می‌شود و سپس چهار مرحلهٔ Dependency → Database → Code → Update طی می‌گردد.</p>
+            <p class="mt-1 text-[10px] leading-6 text-[#718784]">پیش از هر مرحله، دستور Git که در متغیرهای محیطی (EnvKit) تعیین شده اجرا می‌شود و سپس چهار مرحلهٔ Dependency → Database → Code → Update طی می‌گردد.</p>
+            <code dir="ltr" class="mt-2 inline-block rounded bg-[#edf2f1] px-2 py-1 text-[10px]">{{ $gitCommand }}</code>
+            @if(count($pendingCommits))
+                <p class="mt-2 text-[10px] font-bold text-amber-700">{{ fa_digits(count($pendingCommits)) }} کامیت جدید روی مخزن آمادهٔ دریافت است.</p>
+            @else
+                <p class="mt-2 text-[10px] text-emerald-700">سرور به‌روز است؛ کامیت جدیدی در انتظار نیست.</p>
+            @endif
         </div>
     </div>
 
