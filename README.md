@@ -89,6 +89,18 @@ php artisan site:update           # اجرای کامل
 # ج) دکمهٔ «به‌روزرسانی پروژه» در پنل: /admin/update
 ```
 
+**۲.۵) اسکریپت آماده برای EnvKit**
+
+اگر EnvKit فقط می‌تواند «دستور» اجرا کند (نه HTTP)، همین یک خط را در Automation بگذارید:
+
+```bash
+bash scripts/deploy.sh              # اجرای کامل
+bash scripts/deploy.sh --check      # فقط بررسی نسخهٔ جدید
+bash scripts/deploy.sh --dry-run    # نمایش دستورهای مؤثر
+```
+
+خروجی در `storage/logs/deploy.log` ذخیره می‌شود و کد خروج ۰/۱ برای EnvKit قابل خواندن است.
+
 **۳) چه اتفاقی می‌افتد**
 
 `git` (دستور محیطی) → `composer install --no-dev` → `php artisan migrate --force` → `optimize:clear` + `config/route/view cache` → `UPDATE_FINAL_COMMAND`؛ خروجی هر مرحله در جدول `update_logs` ذخیره می‌شود و در پنل قابل مشاهده است.
