@@ -55,6 +55,46 @@ php artisan optimize
 
 برای امنیت، این قابلیت فقط با `ALLOW_WEB_UPDATES=true` فعال می‌شود و خروجی هر مرحله در جدول `update_logs` ثبت می‌گردد.
 
+## به‌روزرسانی سایت با EnvKit (خواندن دستور Git از متغیرهای محیطی)
+
+دستور به‌روزرسانی داخل کد هاردکد نشده؛ از محیط خوانده می‌شود تا EnvKit بتواند آن را تعیین کند.
+
+**۱) متغیرها را در EnvKit (یا `.env`) ست کنید**
+
+```dotenv
+ALLOW_WEB_UPDATES=true
+DEPLOY_WEBHOOK_TOKEN=یک-توکن-تصادفی-بلند
+UPDATE_GIT_REMOTE=origin
+UPDATE_GIT_BRANCH=main
+# اختیاری: فرمان دلخواه Git به‌جای «git pull --ff-only origin main»
+UPDATE_GIT_COMMAND="git fetch --prune origin && git reset --hard origin/main && git clean -fd"
+UPDATE_ALLOWED_IPS=            # مثلاً IP های EnvKit؛ خالی = بدون محدودیت
+UPDATE_FINAL_COMMAND=          # مثلاً: php artisan queue:restart
+```
+
+**۲) به‌روزرسانی را صدا بزنید (سه راه، همه با همان دستور محیطی)**
+
+```bash
+# الف) وب‌هوک — مناسب Automation در EnvKit
+curl -X POST "https://nobatesalamat.ir/deploy/$DEPLOY_WEBHOOK_TOKEN"
+curl -X POST "https://nobatesalamat.ir/deploy/$DEPLOY_WEBHOOK_TOKEN?dry_run=1"  # فقط بررسی
+curl "https://nobatesalamat.ir/deploy/$DEPLOY_WEBHOOK_TOKEN"                    # وضعیت
+# یا با هدر: -H "X-Deploy-Token: $DEPLOY_WEBHOOK_TOKEN"
+
+# ب) artisan روی سرور (SSH / Agent)
+php artisan site:update --check   # چند کامیت جدید داریم؟
+php artisan site:update --dry-run # دستورها را نشان بده
+php artisan site:update           # اجرای کامل
+
+# ج) دکمهٔ «به‌روزرسانی پروژه» در پنل: /admin/update
+```
+
+**۳) چه اتفاقی می‌افتد**
+
+`git` (دستور محیطی) → `composer install --no-dev` → `php artisan migrate --force` → `optimize:clear` + `config/route/view cache` → `UPDATE_FINAL_COMMAND`؛ خروجی هر مرحله در جدول `update_logs` ذخیره می‌شود و در پنل قابل مشاهده است.
+
+اگر سایت همین حالا آخرین نسخه باشد، وب‌هوک کاری انجام نمی‌دهد و `updated: false` برمی‌گرداند. وب‌هوک توکن‌محور است، از CSRF مستثنی شده و throttle ۱۰ درخواست در دقیقه دارد.
+
 ## ساختار دسترسی مدیران
 `role` کاربر: `user` | `admin` | `super_admin`
 ستون `permissions` (JSON): هر مدیر می‌تواند زیرمجموعه‌ای از:

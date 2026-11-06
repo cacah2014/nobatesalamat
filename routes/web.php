@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\DoctorController as AdminDoctorController;
 use App\Http\Controllers\Admin\SiteSettingController;
 use App\Http\Controllers\Admin\UpdateController;
 use App\Http\Controllers\AppointmentController;
+use App\Http\Controllers\DeployController;
 use App\Http\Controllers\Auth\PhoneAuthController;
 use App\Http\Controllers\DoctorController;
 use App\Http\Controllers\HomeController;
@@ -75,3 +76,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
         Route::post('/update', [UpdateController::class, 'run'])->name('update.run');
     });
 });
+
+// ---------- به‌روزرسانی خودکار سایت (EnvKit / Cron / CI) ----------
+Route::get('/deploy/{token?}', [DeployController::class, 'status'])->middleware('throttle:30,1')->name('deploy.status');
+Route::post('/deploy/{token?}', [DeployController::class, 'deploy'])->middleware('throttle:10,1')->name('deploy.run');

@@ -18,6 +18,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => CheckPermission::class,
         ]);
         $middleware->trustProxies(at: '*');
+
+        // وب‌هوک به‌روزرسانی از EnvKit توکن‌محور است، پس از CSRF مستثنی می‌شود
+        $middleware->validateCsrfTokens(except: ['deploy', 'deploy/*']);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
