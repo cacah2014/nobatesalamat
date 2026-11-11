@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\OtpCode;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 class OtpService
 {
@@ -104,16 +105,22 @@ class OtpService
         $otp = OtpCode::where('phone', $phone)->latest('id')->first();
 
         if (! $otp) {
+            $this->logResult($phone, 'missing');
+
             return ['status' => self::STATUS_MISSING, 'attempts_left' => 0, 'expires_in' => 0];
         }
 
         if ($otp->expires_at && $otp->expires_at->isPast()) {
+            $this->logResult($phone, 'expired', 0, $this->secondsLeft($otp));
+
             return ['status' => self::STATUS_EXPIRED, 'attempts_left' => 0, 'expires_in' => 0];
         }
 
         $attempts = (int) $otp->attempts;
 
         if ($attempts >= $this->maxAttempts()) {
+            $this->logResult($phone, 'too_many', 0, $this->secondsLeft($otp));
+
             return ['status' => self::STATUS_TOO_MANY, 'attempts_left' => 0, 'expires_in' => 0];
         }
 
@@ -123,6 +130,7 @@ class OtpService
         if ($digits === '' || ! hash_equals($otp->code_hash, $this->hash($phone, $digits))) {
             $otp->increment('attempts');
             $attempts++;
+            $this->logResult($phone, 'invalid', max(0, $this->maxAttempts() - $attempts), $this->secondsLeft($otp));
 
             return [
                 'status' => self::STATUS_INVALID,
@@ -132,6 +140,7 @@ class OtpService
         }
 
         $otp->delete();
+        $this->logResult($phone, 'ok');
 
         return ['status' => self::STATUS_OK, 'attempts_left' => $this->maxAttempts(), 'expires_in' => 0];
     }
@@ -173,6 +182,24 @@ class OtpService
         }
 
         return max(0, (int) now()->diffInSeconds($otp->expires_at, false));
+    }
+
+    /** ثبت نتیجهٔ بررسی در لاگ برای عیب‌یابی (شماره ماسک می‌شود) */
+    private function logResult(string $phone, string $status, int $attemptsLeft = 0, int $expiresIn = 0): void
+    {
+        Log::info('[OTP] verify', [
+            'phone' => $this->maskPhone($phone),
+            'status' => $status,
+            'attempts_left' => $attemptsLeft,
+            'expires_in' => $expiresIn,
+        ]);
+    }
+
+    private function maskPhone(string $phone): string
+    {
+        return strlen($phone) > 6
+            ? substr($phone, 0, 4) . '***' . substr($phone, -2)
+            : '***';
     }
 
     private function sentKey(string $phone): string

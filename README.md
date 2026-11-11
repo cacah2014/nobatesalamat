@@ -116,11 +116,25 @@ php artisan user:status 09121234567 blocked  # مسدود کردن یک شمار
 ## کد تأیید کار نمی‌کند / «تأیید کد انجام نشد»
 
 ```bash
-php artisan otp:status 09121234567              # وضعیت کد: ثانیهٔ باقی‌مانده و تعداد تلاش
-php artisan otp:status 09121234567 --issue      # ساخت کد جدید + ارسال پیامک (کد چاپ می‌شود)
-php artisan otp:status 09121234567 --no-sms     # فقط ساخت کد برای تست ورود، بدون پیامک
-php artisan otp:status 09121234567 --clear      # پاک کردن کد و بازنشانی محدودیت ارسال
+php artisan otp:status 09121234567                 # وضعیت کد: ثانیهٔ باقی‌مانده و تعداد تلاش
+php artisan otp:status 09121234567 --issue         # ساخت کد جدید + ارسال پیامک (کد چاپ می‌شود)
+php artisan otp:status 09121234567 --issue --no-sms # فقط ساخت کد، بدون پیامک
+php artisan otp:status 09121234567 --check=48213    # بررسی همان کدی که در فرم می‌زنید
+php artisan otp:status 09121234567 --clear          # پاک کردن کد و بازنشانی محدودیت ارسال
 ```
+
+**روش سریع عیب‌یابی (بدون مرورگر):**
+
+```bash
+php artisan otp:status 09121234567 --issue --no-sms   # ۱) کد ساخته و چاپ می‌شود
+php artisan otp:status 09121234567 --check=کدِچاپ‌شده # ۲) باید «معتبر ✅» بدهد
+grep '\[OTP\]' storage/logs/laravel.log | tail -5    # ۳) دلیل دقیق هر تلاش
+```
+
+اگر مرحلهٔ ۲ «معتبر» داد ولی مرورگر خطا نشان می‌دهد، مشکل سمت نشست/ویو است:
+`php artisan view:clear` و بررسی جدول `sessions`.
+
+**هر تغییر در `.env` یا کد، نیاز به این دارد:** `php artisan optimize:clear` (کش ویو و کانفیگ). و اگر `APP_KEY` را عوض کرده‌اید، کدهای قبلی بی‌اعتبار می‌شوند → کد جدید بگیرید.
 
 دلایل رایج و تنظیمات مربوطه:
 

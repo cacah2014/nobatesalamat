@@ -13,9 +13,10 @@ class OtpStatusCommand extends Command
         {phone : شمارهٔ موبایل، مثال 09121234567}
         {--issue : ساخت کد جدید و نمایش آن (برای تست ورود)}
         {--no-sms : فقط کد ساخته شود، پیامک ارسال نشود}
+        {--check= : بررسی یک کد مشخص، مثال --check=48213}
         {--clear : پاک کردن کد فعلی و بازنشانی محدودیت ارسال}';
 
-    protected $description = 'وضعیت کد یک‌بارمصرف یک شماره: زمان انقضا، تعداد تلاش و ساخت کد تستی';
+    protected $description = 'وضعیت کد یک‌بارمصرف: انقضا، تعداد تلاش، ساخت کد تستی و بررسی صحت کد';
 
     public function handle(OtpService $otp, SmsService $sms): int
     {
@@ -32,6 +33,26 @@ class OtpStatusCommand extends Command
             $this->info('✅ کد و محدودیت ارسال برای ' . $phone . ' پاک شد.');
 
             return self::SUCCESS;
+        }
+
+        // بررسی همان مسیری که فرم ورود طی می‌کند (بدون مرورگر)
+        $requestedCode = $this->option('check');
+
+        if ($requestedCode !== null && $requestedCode !== '') {
+            $result = $otp->verifyStatus($phone, (string) $requestedCode);
+
+            $labels = [
+                OtpService::STATUS_OK => 'معتبر ✅ (با این کد می‌توانید وارد شوید)',
+                OtpService::STATUS_INVALID => 'اشتباه ❌',
+                OtpService::STATUS_EXPIRED => 'منقضی شده ⏰',
+                OtpService::STATUS_MISSING => 'کدی برای این شماره ثبت نشده',
+                OtpService::STATUS_TOO_MANY => 'تعداد تلاش بیش از حد مجاز',
+            ];
+
+            $this->line('نتیجه: ' . ($labels[$result['status']] ?? $result['status']));
+            $this->line('تلاش باقی‌مانده: ' . $result['attempts_left'] . ' | ثانیهٔ اعتبار: ' . $result['expires_in']);
+
+            return $result['status'] === OtpService::STATUS_OK ? self::SUCCESS : self::FAILURE;
         }
 
         $this->line('شماره: ' . $phone);
