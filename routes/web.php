@@ -25,11 +25,12 @@ Route::get('/robots.txt', [SitemapController::class, 'robots'])->name('robots');
 Route::get('/sitemap.xml', [SitemapController::class, 'sitemap'])->name('sitemap');
 
 // ---------- ورود موبایلی ----------
-Route::middleware('guest')->group(function () {
-    Route::get('/login', [PhoneAuthController::class, 'showLogin'])->name('login');
-    Route::post('/auth/otp', [PhoneAuthController::class, 'sendOtp'])->name('auth.otp')->middleware('throttle:10,1');
-    Route::post('/auth/verify', [PhoneAuthController::class, 'verify'])->name('auth.verify')->middleware('throttle:10,1');
-});
+Route::get('/login', [PhoneAuthController::class, 'showLogin'])->name('login')->middleware('guest');
+
+// این دو مسیر JSON هستند و نباید در گروه guest باشند؛ وگرنه اگر نشستی از قبل
+// وجود داشته باشد پاسخ 302 می‌آید و «تأیید کد انجام نشد» نمایش داده می‌شود.
+Route::post('/auth/otp', [PhoneAuthController::class, 'sendOtp'])->name('auth.otp')->middleware('throttle:20,1');
+Route::post('/auth/verify', [PhoneAuthController::class, 'verify'])->name('auth.verify')->middleware('throttle:20,1');
 Route::post('/logout', [PhoneAuthController::class, 'logout'])->name('logout')->middleware('auth');
 
 // ---------- کاربر واردشده ----------

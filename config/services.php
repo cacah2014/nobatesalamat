@@ -22,8 +22,10 @@ return [
         'admin_phone' => env('ADMIN_PHONE', '09120000000'),
         'allow_web_updates' => filter_var(env('ALLOW_WEB_UPDATES', false), FILTER_VALIDATE_BOOL),
         'update_final_command' => env('UPDATE_FINAL_COMMAND'),
-        'otp_ttl_seconds' => 120,
-        'otp_resend_seconds' => 55,
+        // طول عمر کد، فاصلهٔ مجاز ارسال مجدد و حداکثر تلاش اشتباه
+        'otp_ttl_seconds' => (int) env('OTP_TTL_SECONDS', 180),
+        'otp_resend_seconds' => (int) env('OTP_RESEND_SECONDS', 55),
+        'otp_max_attempts' => (int) env('OTP_MAX_ATTEMPTS', 5),
 
         /*
         |------------------------------------------------------------------

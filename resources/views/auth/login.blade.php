@@ -60,7 +60,28 @@ async function post(url, payload) {
         headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': token, 'Accept': 'application/json' },
         body: JSON.stringify(payload),
     });
-    return { status: response.status, data: await response.json() };
+
+    let data = {};
+    try {
+        data = await response.json();
+    } catch (e) {
+        data = {};
+    }
+
+    if (response.status === 419) data = { ...data, error: 'نشست شما منقضی شده است؛ صفحه را یک‌بار رفرش کنید.' };
+
+    return { status: response.status, data };
+}
+
+// پیام خطای قابل فهم از هر شکلی از پاسخ سرور
+function friendlyError(data, fallback) {
+    const raw = data?.error || data?.message || '';
+    if (!raw && data?.errors) {
+        const first = Object.values(data.errors)[0];
+        if (first) return Array.isArray(first) ? first[0] : first;
+    }
+    if (/Too Many Attempts/i.test(raw)) return 'تعداد درخواست‌ها زیاد شد؛ یک دقیقه صبر کنید.';
+    return raw || fallback;
 }
 
 function showError(id, text) {
@@ -69,12 +90,18 @@ function showError(id, text) {
     el.classList.remove('hidden');
 }
 
+function hideError(id) {
+    document.getElementById(id).classList.add('hidden');
+}
+
 async function requestCode(button) {
     button.disabled = true;
+    hideError('phone-error');
+    hideError('code-error');
     const { status, data } = await post('{{ route('auth.otp') }}', { phone });
     button.disabled = false;
     if (status !== 200) {
-        showError('phone-error', data.error || 'ارسال کد انجام نشد.');
+        showError('phone-error', friendlyError(data, 'ارسال کد انجام نشد.'));
         return;
     }
     document.getElementById('phone-step').classList.add('hidden');
@@ -120,11 +147,16 @@ document.getElementById('code-step').addEventListener('submit', async (e) => {
     e.preventDefault();
     const button = e.target.querySelector('button');
     button.disabled = true;
+    hideError('code-error');
     const code = document.getElementById('code-input').value.trim();
     const { status, data } = await post('{{ route('auth.verify') }}', { phone, code });
     button.disabled = false;
-    if (status === 200) window.location.href = data.redirectTo;
-    else showError('code-error', data.error || 'تأیید کد انجام نشد.');
+    if (status === 200) {
+        window.location.href = data.redirectTo;
+    } else {
+        showError('code-error', friendlyError(data, 'تأیید کد انجام نشد.'));
+        document.getElementById('code-input').select();
+    }
 });
 </script>
 @endpush
