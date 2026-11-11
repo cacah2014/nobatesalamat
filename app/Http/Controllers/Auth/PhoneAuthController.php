@@ -69,11 +69,14 @@ class PhoneAuthController extends Controller
             return response()->json(['error' => 'کد واردشده اشتباه یا منقضی شده است.'], 422);
         }
 
-        $user = User::firstOrCreate(['phone' => $phone], ['permissions' => []]);
+        $user = User::firstOrCreate(
+            ['phone' => $phone],
+            ['status' => 'active', 'permissions' => []]
+        );
 
         // اگر حساب غیرفعال شده باشد
-        if ($user->status !== 'active') {
-            return response()->json(['error' => 'حساب شما غیرفعال است.'], 403);
+        if (! $user->isActive()) {
+            return response()->json(['error' => 'حساب شما غیرفعال است. برای پیگیری با پشتیبانی تماس بگیرید.'], 403);
         }
 
         Auth::login($user, remember: true);

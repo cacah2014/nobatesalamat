@@ -28,6 +28,20 @@ class User extends Authenticatable
         return $this->hasMany(Appointment::class);
     }
 
+    /**
+     * فعال بودن حساب.
+     *
+     * مقدارهای خالی/NULL (ردیف‌های قدیمی یا جدولی که ستون status را ندارد)
+     * «فعال» در نظر گرفته می‌شوند تا ورود کاربران قفل نشود؛ فقط وضعیت‌های
+     * blocked / inactive / disabled حساب را می‌بندند.
+     */
+    public function isActive(): bool
+    {
+        $status = strtolower(trim((string) $this->status));
+
+        return ! in_array($status, ['blocked', 'inactive', 'disabled', 'suspended'], true);
+    }
+
     public function isAdmin(): bool
     {
         return in_array($this->role, [self::ROLE_ADMIN, self::ROLE_SUPER], true);

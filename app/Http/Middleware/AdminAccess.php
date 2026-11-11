@@ -13,7 +13,7 @@ class AdminAccess
     {
         $user = $request->user();
 
-        if (! $user || ! $user->isAdmin() || $user->status !== 'active') {
+        if (! $user || ! $user->isAdmin() || ! $user->isActive()) {
             if ($request->expectsJson()) {
                 return response()->json(['error' => 'دسترسی غیرمجاز'], 403);
             }
