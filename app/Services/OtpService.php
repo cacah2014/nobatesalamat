@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Log;
 
 class OtpService
 {
-    public function __construct(private KavenegarService $sms) {}
+    public function __construct(private SmsService $sms) {}
 
     /**
      * تولید و ارسال کد. اتمسفیر امن: هش HMAC + مهلت + محدودیت ارسال مجدد.
@@ -37,17 +37,25 @@ class OtpService
 
         Cache::put("otp_sent_at:$phone", true, $resendAfter);
 
-        $sent = $this->sms->sendVerificationCode($phone, $code);
+        try {
+            $result = $this->sms->sendOtp($phone, $code);
+        } catch (\Throwable $e) {
+            // ارسال ناموفق: کد بیمصرف پاک شود و کاربر فوراً بتواند دوباره تلاش کند
+            Cache::forget("otp_sent_at:$phone");
+            OtpCode::where('phone', $phone)->delete();
 
-        // در حالت توسعه یا بدون کلید پیامک، کد آزمایشی برگردانده می‌شود
-        $devCode = (! $sent && app()->environment('local', 'production'))
-            ? $code
-            : null;
+            throw $e;
+        }
+
+        // کد آزمایشی فقط در حالت شبیه‌سازی (محیط local/testing) نمایش داده می‌شود
+        $simulated = (bool) ($result['simulated'] ?? false);
 
         return [
             'ok' => true,
-            'message' => $sent ? 'کد تأیید پیامک شد.' : 'کد آزمایشی ایجاد شد.',
-            'dev_code' => $devCode,
+            'message' => $simulated
+                ? 'کد آزمایشی ایجاد شد (پنل پیامک تنظیم نشده است).'
+                : 'کد تأیید پیامک شد.',
+            'dev_code' => $simulated ? $code : null,
         ];
     }
 

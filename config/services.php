@@ -2,10 +2,19 @@
 
 return [
 
-    // سرویس پیامک کاوه‌نگار برای ارسال کد ورود
-    'kavenegar' => [
-        'api_key' => env('KAVENEGAR_API_KEY'),
-        'template' => env('KAVENEGAR_TEMPLATE', 'login'),
+    /*
+    |------------------------------------------------------------------
+    | پنل پیامک ستارگان (srscrm.ir) — ارسال کد ورود
+    |------------------------------------------------------------------
+    | POST https://srscrm.ir/api/sms/send  با هدر Authorization: Bearer
+    | پارامترها: to، message، gateway (شمارهٔ خط فرستنده، نه شناسه)
+    */
+    'sms' => [
+        'base_url' => env('SMS_BASE_URL', 'https://srscrm.ir/api/sms/send'),
+        'token' => env('SMS_TOKEN'),
+        'gateway' => env('SMS_GATEWAY'),
+        'timeout' => (int) env('SMS_TIMEOUT', 15),
+        'otp_template' => env('SMS_OTP_TEMPLATE', 'کد ورود شما به نوبت سلامت: %s'),
     ],
 
     // تنظیمات اختصاصی نوبت سلامت
