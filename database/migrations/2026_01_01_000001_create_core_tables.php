@@ -36,6 +36,7 @@ return new class extends Migration
             $table->text('description');
             $table->boolean('is_active')->default(true)->index();
             $table->unsignedSmallInteger('sort_order')->default(0);
+            $table->timestamps();
         });
 
         Schema::create('doctors', function (Blueprint $table) {
