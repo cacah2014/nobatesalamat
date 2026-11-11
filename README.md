@@ -101,6 +101,18 @@ php artisan optimize
 
 برای امنیت، این قابلیت فقط با `ALLOW_WEB_UPDATES=true` فعال می‌شود و خروجی هر مرحله در جدول `update_logs` ثبت می‌گردد.
 
+## خطای «حساب شما غیرفعال است»
+
+این پیام یعنی مقدار ستون `status` آن کاربر `active` نیست — یا `NULL` است (مثلاً جدول `users` از نسخهٔ قدیمی پروژه مانده و مهاجرت اجرا نشده).
+
+```bash
+php artisan app:check                        # بررسی جدول‌ها، ستون‌ها و وضعیت کاربران
+php artisan migrate                          # ستون status را می‌سازد و ردیف‌های NULL را active می‌کند
+php artisan user:status --admins             # فهرست مدیران و فعال/غیرفعال بودنشان
+php artisan user:status 09120000000 active   # فعال‌سازی یک شماره
+php artisan user:status 09121234567 blocked  # مسدود کردن یک شماره
+```
+
 ## پنل پیامک (ستارگان — srscrm.ir)
 
 ارسال کد ورود از طریق API پنل پیامک ستارگان انجام می‌شود:
