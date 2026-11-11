@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Exceptions\SmsException;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\OtpService;
@@ -36,6 +37,9 @@ class PhoneAuthController extends Controller
 
         try {
             $result = $this->otp->send($phone);
+        } catch (SmsException $e) {
+            // پیام دقیق پنل پیامک (توکن نامعتبر، نبود اعتبار، خط غیرفعال …)
+            return response()->json(['error' => $e->getMessage(), 'code' => $e->errorCode()], 500);
         } catch (\Throwable) {
             return response()->json(['error' => 'ارسال کد با خطا روبه‌رو شد. دوباره تلاش کنید.'], 500);
         }
