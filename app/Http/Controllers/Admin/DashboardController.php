@@ -9,7 +9,7 @@ use App\Models\UpdateLog;
 use App\Models\User;
 use Illuminate\View\View;
 
-class AdminDashboardController extends Controller
+class DashboardController extends Controller
 {
     public function index(): View
     {

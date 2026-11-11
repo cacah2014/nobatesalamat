@@ -39,6 +39,17 @@ bash scripts/install.sh --sqlite --seed
 - **بدون اسکریپت:** `composer install` → `copy .env.example .env` → `php artisan key:generate` → `php artisan migrate --seed`.
 - اگر `composer` نصب نیست: <https://getcomposer.org/download/> (یا `winget install Composer`).
 
+**پس از هر به‌روزرسانی کد (مهم)**
+
+اگر فایل‌ها را با ZIP یا `git pull` جای‌گزین می‌کنید، کلاس‌های جدید تا وقتی autoload بازسازی نشود شناخته نمی‌شوند و ممکن است خطاهایی مثل
+`Cannot redeclare class ...` یا `Class ... not found` ببینید:
+
+```bash
+composer dump-autoload -o
+php artisan optimize:clear
+php artisan config:cache && php artisan route:cache && php artisan view:cache
+```
+
 **اجرای پروژه با سرور توکار PHP:**
 
 ```bash
