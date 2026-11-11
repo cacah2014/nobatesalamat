@@ -4,44 +4,56 @@ namespace App\Services;
 
 use App\Models\OtpCode;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Log;
 
 class OtpService
 {
+    /** @var array<int, string> وضعیت‌های خروجی بررسی کد */
+    public const STATUS_OK = 'ok';
+    public const STATUS_MISSING = 'missing';
+    public const STATUS_EXPIRED = 'expired';
+    public const STATUS_INVALID = 'invalid';
+    public const STATUS_TOO_MANY = 'too_many';
+
     public function __construct(private SmsService $sms) {}
 
+    public function ttl(): int
+    {
+        return max(60, (int) config('services.nobat.otp_ttl_seconds', 180));
+    }
+
+    public function resendAfter(): int
+    {
+        return max(30, (int) config('services.nobat.otp_resend_seconds', 55));
+    }
+
+    public function maxAttempts(): int
+    {
+        return max(3, (int) config('services.nobat.otp_max_attempts', 5));
+    }
+
     /**
-     * تولید و ارسال کد. اتمسفیر امن: هش HMAC + مهلت + محدودیت ارسال مجدد.
+     * تولید و ارسال کد.
      * خروجی: ['ok' => bool, 'message' => string, 'dev_code' => ?string]
      */
     public function send(string $phone): array
     {
-        $ttl = (int) config('services.nobat.otp_ttl_seconds');
-        $resendAfter = (int) config('services.nobat.otp_resend_seconds');
+        if (Cache::has($this->sentKey($phone))) {
+            $wait = max(1, (int) Cache::get($this->sentKey($phone), 0));
 
-        // محدودیت ارسال مجدد
-        if (Cache::has("otp_sent_at:$phone")) {
-            return ['ok' => false, 'message' => 'لطفاً برای ارسال مجدد کمی صبر کنید.', 'dev_code' => null];
+            return [
+                'ok' => false,
+                'message' => 'لطفاً ' . fa_digits((string) $wait) . ' ثانیه دیگر برای ارسال مجدد صبر کنید.',
+                'dev_code' => null,
+            ];
         }
 
-        $code = (string) random_int(10000, 99999);
-
-        OtpCode::where('phone', $phone)->delete();
-        OtpCode::create([
-            'phone' => $phone,
-            'code_hash' => $this->hash($phone, $code),
-            'attempts' => 0,
-            'expires_at' => now()->addSeconds($ttl),
-            'created_at' => now(),
-        ]);
-
-        Cache::put("otp_sent_at:$phone", true, $resendAfter);
+        $code = $this->store($phone);
 
         try {
             $result = $this->sms->sendOtp($phone, $code);
         } catch (\Throwable $e) {
-            // ارسال ناموفق: کد بیمصرف پاک شود و کاربر فوراً بتواند دوباره تلاش کند
-            Cache::forget("otp_sent_at:$phone");
+            // ارسال ناموفق: کد بی‌مصرف پاک شود و کاربر فوراً بتواند دوباره تلاش کند
+            Cache::forget($this->sentKey($phone));
             OtpCode::where('phone', $phone)->delete();
 
             throw $e;
@@ -59,26 +71,113 @@ class OtpService
         ];
     }
 
-    /** بررسی کد با محدودیت ۵ تلاش */
-    public function verify(string $phone, string $code): bool
+    /**
+     * ساخت کد جدید و ذخیرهٔ هش آن (بدون ارسال پیامک).
+     * برای ارسال، send() از همین متد استفاده می‌کند؛ دستور otp:status هم
+     * می‌تواند با آن کد را برای تست روی سرور بسازد.
+     */
+    public function store(string $phone): string
     {
-        $otp = OtpCode::where('phone', $phone)
-            ->where('expires_at', '>', now())
-            ->latest('created_at')
-            ->first();
+        $code = (string) random_int(10000, 99999);
 
-        if (! $otp || $otp->attempts >= 5) {
-            return false;
+        OtpCode::where('phone', $phone)->delete();
+        OtpCode::create([
+            'phone' => $phone,
+            'code_hash' => $this->hash($phone, $code),
+            'attempts' => 0,
+            'expires_at' => now()->addSeconds($this->ttl()),
+            'created_at' => now(),
+        ]);
+
+        Cache::put($this->sentKey($phone), $this->resendAfter(), $this->resendAfter());
+
+        return $code;
+    }
+
+    /**
+     * بررسی کد و برگرداندن دقیق نتیجه.
+     *
+     * @return array{status: string, attempts_left: int, expires_in: int}
+     */
+    public function verifyStatus(string $phone, string $code): array
+    {
+        $otp = OtpCode::where('phone', $phone)->latest('id')->first();
+
+        if (! $otp) {
+            return ['status' => self::STATUS_MISSING, 'attempts_left' => 0, 'expires_in' => 0];
         }
 
-        if (! hash_equals($otp->code_hash, $this->hash($phone, en_digits($code)))) {
+        if ($otp->expires_at && $otp->expires_at->isPast()) {
+            return ['status' => self::STATUS_EXPIRED, 'attempts_left' => 0, 'expires_in' => 0];
+        }
+
+        $attempts = (int) $otp->attempts;
+
+        if ($attempts >= $this->maxAttempts()) {
+            return ['status' => self::STATUS_TOO_MANY, 'attempts_left' => 0, 'expires_in' => 0];
+        }
+
+        // فقط ارقام: جلوگیری از خطای کدهایی مثل «۱۲ ۳۴۵» یا «12345 »
+        $digits = preg_replace('/\D+/', '', en_digits($code));
+
+        if ($digits === '' || ! hash_equals($otp->code_hash, $this->hash($phone, $digits))) {
             $otp->increment('attempts');
-            return false;
+            $attempts++;
+
+            return [
+                'status' => self::STATUS_INVALID,
+                'attempts_left' => max(0, $this->maxAttempts() - $attempts),
+                'expires_in' => $this->secondsLeft($otp),
+            ];
         }
 
         $otp->delete();
 
-        return true;
+        return ['status' => self::STATUS_OK, 'attempts_left' => $this->maxAttempts(), 'expires_in' => 0];
+    }
+
+    /** بررسی کد به‌صورت بولی (سازگاری با کدهای قبلی) */
+    public function verify(string $phone, string $code): bool
+    {
+        return $this->verifyStatus($phone, $code)['status'] === self::STATUS_OK;
+    }
+
+    /** اطلاعات کد فعلی برای عیب‌یابی (کد قابل بازیابی نیست چون هش ذخیره می‌شود) */
+    public function inspect(string $phone): ?array
+    {
+        $otp = OtpCode::where('phone', $phone)->latest('id')->first();
+
+        if (! $otp) {
+            return null;
+        }
+
+        return [
+            'created_at' => $otp->created_at,
+            'expires_at' => $otp->expires_at,
+            'expires_in' => $this->secondsLeft($otp),
+            'attempts' => (int) $otp->attempts,
+            'max_attempts' => $this->maxAttempts(),
+        ];
+    }
+
+    public function clear(string $phone): void
+    {
+        OtpCode::where('phone', $phone)->delete();
+        Cache::forget($this->sentKey($phone));
+    }
+
+    private function secondsLeft(OtpCode $otp): int
+    {
+        if (! $otp->expires_at) {
+            return 0;
+        }
+
+        return max(0, (int) now()->diffInSeconds($otp->expires_at, false));
+    }
+
+    private function sentKey(string $phone): string
+    {
+        return "otp_sent_at:$phone";
     }
 
     private function hash(string $phone, string $code): string

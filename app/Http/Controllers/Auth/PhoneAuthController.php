@@ -10,6 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\View\View;
 
 class PhoneAuthController extends Controller
@@ -28,8 +29,20 @@ class PhoneAuthController extends Controller
     /** مرحلهٔ ۱: درخواست کد تأیید */
     public function sendOtp(Request $request): JsonResponse
     {
-        $data = $request->validate(['phone' => ['required', 'string', 'max:20']]);
-        $phone = normalize_phone($data['phone']);
+        $validator = Validator::make($request->all(), [
+            'phone' => ['required', 'string', 'max:20'],
+        ], [
+            'phone.required' => 'شماره موبایل را وارد کنید.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'error' => $validator->errors()->first('phone'),
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $phone = normalize_phone((string) $request->input('phone'));
 
         if (! preg_match('/^09\d{9}$/', $phone)) {
             return response()->json(['error' => 'شماره موبایل را به‌صورت ۰۹xxxxxxxxx وارد کنید.'], 422);
@@ -40,7 +53,9 @@ class PhoneAuthController extends Controller
         } catch (SmsException $e) {
             // پیام دقیق پنل پیامک (توکن نامعتبر، نبود اعتبار، خط غیرفعال …)
             return response()->json(['error' => $e->getMessage(), 'code' => $e->errorCode()], 500);
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            report($e);
+
             return response()->json(['error' => 'ارسال کد با خطا روبه‌رو شد. دوباره تلاش کنید.'], 500);
         }
 
@@ -58,15 +73,53 @@ class PhoneAuthController extends Controller
     /** مرحلهٔ ۲: تأیید کد و ورود/ساخت حساب */
     public function verify(Request $request): JsonResponse
     {
-        $data = $request->validate([
+        $validator = Validator::make($request->all(), [
             'phone' => ['required', 'string', 'max:20'],
             'code' => ['required', 'string', 'min:4', 'max:8'],
+        ], [
+            'code.required' => 'کد تأیید را وارد کنید.',
+            'code.min' => 'کد تأیید ۵ رقمی است.',
+            'code.max' => 'کد تأیید ۵ رقمی است.',
         ]);
 
-        $phone = normalize_phone($data['phone']);
+        if ($validator->fails()) {
+            return response()->json([
+                'error' => $validator->errors()->first('code') ?: $validator->errors()->first(),
+                'errors' => $validator->errors(),
+            ], 422);
+        }
 
-        if (! $this->otp->verify($phone, $data['code'])) {
-            return response()->json(['error' => 'کد واردشده اشتباه یا منقضی شده است.'], 422);
+        $phone = normalize_phone((string) $request->input('phone'));
+        $result = $this->otp->verifyStatus($phone, (string) $request->input('code'));
+
+        switch ($result['status']) {
+            case OtpService::STATUS_OK:
+                break;
+
+            case OtpService::STATUS_MISSING:
+                return response()->json([
+                    'error' => 'کدی برای این شماره ثبت نشده است. دوباره «دریافت کد ورود» را بزنید.',
+                ], 422);
+
+            case OtpService::STATUS_EXPIRED:
+                return response()->json([
+                    'error' => 'کد تأیید منقضی شده است. کد جدید بگیرید.',
+                ], 422);
+
+            case OtpService::STATUS_TOO_MANY:
+                return response()->json([
+                    'error' => 'تعداد تلاش‌های ناموفق زیاد بود. کد جدید بگیرید.',
+                ], 429);
+
+            default:
+                $left = (int) ($result['attempts_left'] ?? 0);
+
+                return response()->json([
+                    'error' => $left > 0
+                        ? 'کد واردشده اشتباه است. ' . fa_digits((string) $left) . ' تلاش دیگر باقی مانده.'
+                        : 'کد واردشده اشتباه است. کد جدید بگیرید.',
+                    'attempts_left' => $left,
+                ], 422);
         }
 
         $user = User::firstOrCreate(
