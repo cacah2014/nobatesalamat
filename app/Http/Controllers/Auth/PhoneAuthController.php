@@ -10,6 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\View\View;
 
@@ -126,6 +127,18 @@ class PhoneAuthController extends Controller
             ['phone' => $phone],
             ['status' => 'active', 'permissions' => []]
         );
+
+        // شمارهٔ تنظیم‌شده در ADMIN_PHONE همان «مدیر اصلی» است؛ با اولین ورود
+        // حسابش به مدیر ارشد ارتقا می‌یابد تا نیازی به دست‌کاری دیتابیس نباشد.
+        if (is_admin_phone($user->phone) && ! $user->isSuperAdmin()) {
+            $user->forceFill([
+                'role' => User::ROLE_SUPER,
+                'status' => 'active',
+                'full_name' => $user->full_name ?: 'مدیر ارشد نوبت سلامت',
+            ])->save();
+
+            Log::info('[ADMIN] ارتقای شمارهٔ مدیر اصلی به مدیر ارشد', ['phone' => mask_phone($user->phone)]);
+        }
 
         // اگر حساب غیرفعال شده باشد
         if (! $user->isActive()) {

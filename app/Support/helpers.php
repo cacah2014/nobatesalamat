@@ -50,6 +50,52 @@ if (! function_exists('normalize_phone')) {
     }
 }
 
+if (! function_exists('admin_phones')) {
+    /**
+     * فهرست شماره‌های «مدیر اصلی» از ADMIN_PHONE.
+     * چند شماره را می‌توان با کاما (یا فاصله) جدا کرد.
+     *
+     * @return array<int, string>
+     */
+    function admin_phones(): array
+    {
+        $raw = (string) config('services.nobat.admin_phone', '');
+        $phones = [];
+
+        foreach (preg_split('/[\s,;]+/', $raw, -1, PREG_SPLIT_NO_EMPTY) ?: [] as $part) {
+            $phone = normalize_phone((string) $part);
+
+            if (preg_match('/^09\d{9}$/', $phone)) {
+                $phones[] = $phone;
+            }
+        }
+
+        return array_values(array_unique($phones));
+    }
+}
+
+if (! function_exists('is_admin_phone')) {
+    /** آیا این شماره، شمارهٔ مدیر اصلی است؟ */
+    function is_admin_phone(?string $phone): bool
+    {
+        return $phone !== null
+            && $phone !== ''
+            && in_array(normalize_phone($phone), admin_phones(), true);
+    }
+}
+
+if (! function_exists('mask_phone')) {
+    /** نمایش امن شماره در لاگ: 0936***8962 */
+    function mask_phone(?string $phone): string
+    {
+        $phone = (string) $phone;
+
+        return strlen($phone) >= 7
+            ? substr($phone, 0, 4) . '***' . substr($phone, -4)
+            : '***';
+    }
+}
+
 if (! function_exists('fa_date')) {
     function fa_date(\DateTimeInterface|string|null $date): string
     {
