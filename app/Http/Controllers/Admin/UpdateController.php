@@ -18,10 +18,12 @@ class UpdateController extends Controller
     public function index(): View
     {
         return view('admin.updates', [
-            'enabled' => $this->updater->enabled(),
+            'enabled' => $this->updater->panelEnabled(),
             'logs' => UpdateLog::with('admin')->latest('started_at')->limit(5)->get(),
             'gitCommand' => $this->updater->gitCommand(),
+            'pending' => $this->updater->pendingInfo(),
             'pendingCommits' => $this->updater->pendingCommits(),
+            'preflight' => $this->updater->preflight(),
         ]);
     }
 
@@ -31,8 +33,8 @@ class UpdateController extends Controller
      */
     public function run(Request $request): JsonResponse
     {
-        if (! $this->updater->enabled()) {
-            return response()->json(['error' => 'به‌روزرسانی وب غیرفعال است. ALLOW_WEB_UPDATES=true را تنظیم کنید.'], 503);
+        if (! $this->updater->panelEnabled()) {
+            return response()->json(['error' => 'به‌روزرسانی از پنل غیرفعال است (ALLOW_PANEL_UPDATES=false).'], 503);
         }
 
         if ($this->updater->runningLog()) {
@@ -44,6 +46,7 @@ class UpdateController extends Controller
         return response()->json([
             'ok' => $result['ok'],
             'error' => $result['error'],
+            'warnings' => $result['warnings'] ?? [],
             'output' => $result['output'],
         ], $result['ok'] ? 200 : 500);
     }
