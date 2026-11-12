@@ -64,6 +64,9 @@ return [
                 explode(',', (string) env('UPDATE_ALLOWED_IPS', ''))
             ))),
 
+            // اگر فایلی روی سرور دستی تغییر کرده باشد، قبل از pull در stash ذخیره شود
+            'auto_stash' => filter_var(env('UPDATE_AUTO_STASH', true), FILTER_VALIDATE_BOOL),
+
             'git_remote' => env('UPDATE_GIT_REMOTE', 'origin'),
             'git_branch' => env('UPDATE_GIT_BRANCH', 'main'),
 
