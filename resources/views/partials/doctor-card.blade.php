@@ -1,6 +1,6 @@
 <article class="card-hover overflow-hidden rounded-[22px] border border-[#e0ecea] bg-white">
     <div class="relative h-48 overflow-hidden bg-[#e9f3f1]">
-        <img src="{{ $doctor->image_url }}" alt="تصویر {{ $doctor->full_name }}" class="h-full w-full object-cover object-[center_25%]" loading="lazy">
+        <img src="{{ media_url($doctor->image_url) }}" alt="تصویر {{ $doctor->full_name }}" class="h-full w-full object-cover object-[center_25%]" loading="lazy">
         <span class="absolute right-3 top-3 rounded-full bg-white/95 px-2.5 py-1 text-[11px] font-black text-[#7a5711] shadow-sm">★ {{ fa_digits($doctor->rating) }}</span>
         @if($doctor->is_online)
             <span class="absolute bottom-3 right-3 rounded-full bg-brand px-2.5 py-1 text-[10px] font-bold text-white">● مشاوره آنلاین</span>

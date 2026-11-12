@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Article;
 use App\Models\Doctor;
 use Illuminate\Http\Response;
 
@@ -20,8 +21,17 @@ class SitemapController extends Controller
             ['loc' => url('/'), 'priority' => '1.0'],
             ['loc' => route('doctors.index'), 'priority' => '0.9'],
             ['loc' => route('doctors.index', ['visit' => 'online']), 'priority' => '0.8'],
+            ['loc' => route('articles.index'), 'priority' => '0.7'],
             ['loc' => route('login'), 'priority' => '0.4'],
         ];
+
+        foreach (Article::where('is_published', true)->get(['slug', 'updated_at']) as $article) {
+            $urls[] = [
+                'loc' => route('articles.show', $article),
+                'lastmod' => $article->updated_at?->toAtomString(),
+                'priority' => '0.6',
+            ];
+        }
 
         foreach (Doctor::where('is_active', true)->get(['slug', 'updated_at']) as $doctor) {
             $urls[] = [
