@@ -59,7 +59,11 @@ if (! function_exists('admin_phones')) {
      */
     function admin_phones(): array
     {
-        $raw = (string) config('services.nobat.admin_phone', '');
+        $raw = implode(',', array_filter([
+            (string) config('services.nobat.admin_phone', ''),
+            (string) config('services.nobat.owner_phone', ''),
+        ]));
+
         $phones = [];
 
         foreach (preg_split('/[\s,;]+/', $raw, -1, PREG_SPLIT_NO_EMPTY) ?: [] as $part) {

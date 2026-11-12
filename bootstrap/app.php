@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\AdminAccess;
 use App\Http\Middleware\CheckPermission;
+use App\Http\Middleware\PromoteMainAdmin;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -18,6 +19,11 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => CheckPermission::class,
         ]);
         $middleware->trustProxies(at: '*');
+
+        // شمارهٔ «مدیر اصلی» همیشه مدیر ارشد می‌ماند (اصلاح خودکار نقش)
+        $middleware->web(append: [
+            PromoteMainAdmin::class,
+        ]);
 
         // وب‌هوک به‌روزرسانی از EnvKit توکن‌محور است، پس از CSRF مستثنی می‌شود
         $middleware->validateCsrfTokens(except: ['deploy', 'deploy/*']);
