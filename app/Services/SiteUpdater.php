@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\UpdateLog;
+use Closure;
 use Symfony\Component\Process\Process;
 use Throwable;
 
@@ -194,18 +195,16 @@ class SiteUpdater
             ];
         }
 
-        try {
-            $status = $this->runShell('git status --porcelain', 60);
-            $checks[] = [
-                'label' => 'تغییرات محلی',
-                'ok' => $status === '',
-                'detail' => $status === ''
-                    ? 'فایلی تغییر نکرده است'
-                    : 'این فایل‌ها با git pull تداخل می‌کنند: ' . preg_replace('/\s+/', ' ', $status),
-            ];
-        } catch (Throwable $e) {
-            $checks[] = ['label' => 'تغییرات محلی', 'ok' => false, 'detail' => $e->getMessage()];
-        }
+        $changes = $this->localChanges();
+
+        $checks[] = [
+            'label' => 'تغییرات محلی سرور',
+            'ok' => $changes === [],
+            'detail' => $changes === []
+                ? 'فایلی تغییر نکرده است'
+                : 'این فایل‌ها با git pull تداخل می‌کنند و به‌طور خودکار در «stash» نگه داشته می‌شوند: '
+                    . preg_replace('/\s+/', ' ', implode(' , ', $changes)),
+        ];
 
         return $checks;
     }
@@ -249,6 +248,24 @@ class SiteUpdater
                 'commits' => [],
             ];
         }
+    }
+
+    /**
+     * فایل‌هایی که روی سرور تغییر کرده‌اند و `git pull` را متوقف می‌کنند.
+     *
+     * @return array<int, string>
+     */
+    public function localChanges(): array
+    {
+        try {
+            $status = $this->runShell('git status --porcelain', 60);
+        } catch (Throwable) {
+            return [];
+        }
+
+        $status = trim($status);
+
+        return $status === '' ? [] : array_values(array_filter(array_map('trim', explode("\n", $status))));
     }
 
     public function runningLog(): ?UpdateLog
@@ -297,9 +314,20 @@ class SiteUpdater
         };
 
         $warnings = [];
+        $stashName = null;
 
         try {
             foreach ($this->commands() as [$step, $viaShell, $command, $required]) {
+                // قبل از دریافت نسخهٔ جدید، تغییرات محلی سرور را در stash نگه می‌داریم
+                // تا git pull با خطای «local changes would be overwritten» متوقف نشود.
+                if ($step === 'git_pull' && $stashName === null) {
+                    $stashName = $this->stashLocalChanges($save);
+
+                    if ($stashName !== null) {
+                        $warnings[] = 'تغییرات محلی سرور در stash ذخیره شد (' . $stashName . ')';
+                    }
+                }
+
                 try {
                     $save($step, $viaShell ? $this->runShell($command) : $this->runProcess($command));
                 } catch (Throwable $e) {
@@ -313,6 +341,11 @@ class SiteUpdater
                     $warnings[] = "{$step}: {$message}";
                     $save($step, '[هشدار] ' . $message);
                 }
+            }
+
+            if ($stashName !== null) {
+                $save('git_pull', 'تغییرات محلی روی سرور در stash ذخیره شد. برای دیدن/بازیابی: '
+                    . 'git stash list / git stash show -p stash@{0} / git stash pop');
             }
 
             $final = config('services.nobat.update.final_command');
@@ -329,6 +362,38 @@ class SiteUpdater
 
             return ['ok' => false, 'log' => $log, 'output' => $output, 'error' => $message, 'warnings' => $warnings];
         }
+    }
+
+    /**
+     * ذخیرهٔ تغییرات محلی در stash (قابل بازیابی) و برگرداندن نام stash.
+     *
+     * بدون این کار، اگر کسی فایلی روی سرور را دستی تغییر داده باشد،
+     * `git pull` با خطای «Your local changes would be overwritten» شکست می‌خورد.
+     */
+    private function stashLocalChanges(Closure $save): ?string
+    {
+        $changes = $this->localChanges();
+
+        if ($changes === []) {
+            return null;
+        }
+
+        if (! (bool) config('services.nobat.update.auto_stash', true)) {
+            throw new \RuntimeException(
+                'فایل‌های تغییر‌یافتهٔ محلی مانع به‌روزرسانی هستند: ' . implode(' , ', $changes)
+            );
+        }
+
+        $name = 'auto-stash-' . now()->format('Ymd-His');
+
+        $output = $this->runShell(sprintf(
+            'git stash push --include-untracked -m %s',
+            escapeshellarg($name)
+        ), 180);
+
+        $save('git_pull', 'تغییرات محلی سرور در stash ذخیره شد (' . $name . ')\n' . $output);
+
+        return $name;
     }
 
     private function runProcess(array $command): string

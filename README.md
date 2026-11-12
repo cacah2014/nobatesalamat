@@ -116,6 +116,21 @@ php artisan optimize
 
 نکته: اگر تصویری حذف شود، فایل آن هم از دیسک پاک می‌شود. بالاترین حجم مجاز آپلود به `upload_max_filesize`/`post_max_size` PHP هم بستگی دارد.
 
+## خطای «Your local changes would be overwritten»
+
+اگر روی سرور فایلی دستی تغییر کرده باشد، `git pull --ff-only` با این خطا متوقف می‌شود:
+
+```
+error: Your local changes to the following files would be overwritten by merge
+```
+
+از این نسخه، به‌روزرسانی پنل **قبل از pull** تغییرات محلی را در `git stash` نگه می‌دارد (با نام `auto-stash-YYYYMMDD-HHMMSS`) و بعد pull را انجام می‌دهد؛ بنابراین این خطا دیگر به‌روزرسانی را متوقف نمی‌کند.
+
+- دیدن stashها: `git stash list`
+- دیدن تغییرات ذخیره‌شده: `git stash show -p stash@{0}`
+- برگرداندن آن‌ها: `git stash pop`
+- غیرفعال‌کردن این رفتار: `UPDATE_AUTO_STASH=false`
+
 ## به‌روزرسانی از داخل پنل (بدون EnvKit)
 
 از نسخهٔ اخیر، دکمهٔ **«شروع به‌روزرسانی پروژه»** در پنل (منو → بروزرسانی پروژه) به‌صورت **پیش‌فرض فعال** است و به `ALLOW_WEB_UPDATES` نیازی ندارد؛ چون فقط مدیر با دسترسی `updates` و با CSRF می‌تواند آن را اجرا کند. وب‌هوک عمومی `/deploy/{token}` همچنان به `ALLOW_WEB_UPDATES=true` + توکن نیاز دارد.
