@@ -141,6 +141,14 @@ class PhoneAuthController extends Controller
             Log::info('[ADMIN] ارتقای شمارهٔ مدیر اصلی به مدیر ارشد', ['phone' => mask_phone($user->phone)]);
         }
 
+        // شمارهٔ نمونهٔ نصب (09120000000) نباید هیچ‌وقت مدیر بماند؛ چون مالک آن
+        // شماره می‌توانست با کد پیامکی وارد پنل شود.
+        if (is_placeholder_phone($user->phone) && $user->isAdmin()) {
+            $user->forceFill(['role' => User::ROLE_USER])->save();
+
+            Log::warning('[ADMIN] دسترسی مدیریتی شمارهٔ نمونهٔ نصب حذف شد', ['phone' => mask_phone($user->phone)]);
+        }
+
         // اگر حساب غیرفعال شده باشد
         if (! $user->isActive()) {
             return response()->json(['error' => 'حساب شما غیرفعال است. برای پیگیری با پشتیبانی تماس بگیرید.'], 403);

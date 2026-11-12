@@ -27,6 +27,9 @@ return [
         // شمارهٔ مالک سایت؛ همیشه مدیر ارشد است، حتی اگر ADMIN_PHONE در .env
         // قدیمی/اشتباه مانده باشد. با OWNER_PHONE قابل تغییر است.
         'owner_phone' => env('OWNER_PHONE', '09364528962'),
+
+        // شمارهٔ نمونهٔ نصب؛ هیچ‌وقت مدیر محسوب نمی‌شود (مگر در ADMIN_PHONE باشد)
+        'placeholder_phones' => ['09120000000'],
         'allow_web_updates' => filter_var(env('ALLOW_WEB_UPDATES', false), FILTER_VALIDATE_BOOL),
         'update_final_command' => env('UPDATE_FINAL_COMMAND'),
         // طول عمر کد، فاصلهٔ مجاز ارسال مجدد و حداکثر تلاش اشتباه

@@ -35,7 +35,8 @@ Route::get('/login', [PhoneAuthController::class, 'showLogin'])->name('login')->
 // وجود داشته باشد پاسخ 302 می‌آید و «تأیید کد انجام نشد» نمایش داده می‌شود.
 Route::post('/auth/otp', [PhoneAuthController::class, 'sendOtp'])->name('auth.otp')->middleware('throttle:20,1');
 Route::post('/auth/verify', [PhoneAuthController::class, 'verify'])->name('auth.verify')->middleware('throttle:20,1');
-Route::post('/logout', [PhoneAuthController::class, 'logout'])->name('logout')->middleware('auth');
+// خروج با POST (فرم‌ها) و GET (تایپ آدرس) تا کاربر هرگز در پنل قفل نشود
+Route::match(['get', 'post'], '/logout', [PhoneAuthController::class, 'logout'])->name('logout')->middleware('auth');
 
 // ---------- کاربر واردشده ----------
 Route::middleware('auth')->group(function () {
