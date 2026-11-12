@@ -12,8 +12,8 @@
         <tbody>
             @forelse($appointments as $appointment)
                 <tr class="border-b border-[#f0f4f3]">
-                    <td class="py-3"><b class="block text-[#315b58]">{{ $appointment->patient_name }}</b><span dir="ltr" class="text-[#829592]">{{ $appointment->user->phone }}</span></td>
-                    <td class="py-3">{{ $appointment->doctor->full_name }}</td>
+                    <td class="py-3"><b class="block text-[#315b58]">{{ $appointment->patient_name }}</b><span dir="ltr" class="text-[#829592]">{{ $appointment->user?->phone ?? '—' }}</span></td>
+                    <td class="py-3">{{ $appointment->doctor?->full_name ?? '—' }}</td>
                     <td class="py-3 text-[#607976]">{{ $appointment->appointment_date }}<br><span dir="ltr">{{ fa_digits($appointment->appointment_time) }}</span></td>
                     <td class="py-3">{{ fa_money($appointment->price) }}</td>
                     <td class="py-3">

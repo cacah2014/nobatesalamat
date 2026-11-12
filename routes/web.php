@@ -10,6 +10,7 @@ use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\DeployController;
 use App\Http\Controllers\Auth\PhoneAuthController;
 use App\Http\Controllers\DoctorController;
+use App\Http\Controllers\HealthController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\User\DashboardController;
@@ -19,6 +20,9 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/doctors', [DoctorController::class, 'index'])->name('doctors.index');
 Route::get('/doctors/{doctor}', [DoctorController::class, 'show'])->name('doctors.show');
+
+// ---------- وضعیت سرویس (بررسی از راه دور) ----------
+Route::get('/health', HealthController::class)->name('health');
 
 // ---------- سئو ----------
 Route::get('/robots.txt', [SitemapController::class, 'robots'])->name('robots');

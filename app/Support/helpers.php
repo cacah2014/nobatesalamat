@@ -25,10 +25,15 @@ if (! function_exists('en_digits')) {
 }
 
 if (! function_exists('fa_money')) {
-    /** قالب‌بندی مبلغ به تومان با ارقام فارسی */
-    function fa_money(int|float $amount): string
+    /**
+     * قالب‌بندی مبلغ به تومان با ارقام فارسی.
+     *
+     * مقدار null (مثلاً حاصل Appointment::sum('price') روی جدول خالی) باید
+     * صفر در نظر گرفته شود؛ در غیر این صورت TypeError و خطای 500 می‌داد.
+     */
+    function fa_money(int|float|string|null $amount = 0): string
     {
-        return fa_digits(number_format($amount)) . ' تومان';
+        return fa_digits(number_format((float) ($amount ?? 0))) . ' تومان';
     }
 }
 
