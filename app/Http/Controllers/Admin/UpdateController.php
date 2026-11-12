@@ -24,6 +24,7 @@ class UpdateController extends Controller
             'pending' => $this->updater->pendingInfo(),
             'pendingCommits' => $this->updater->pendingCommits(),
             'preflight' => $this->updater->preflight(),
+            'localChanges' => $this->updater->localChanges(),
         ]);
     }
 
@@ -41,7 +42,10 @@ class UpdateController extends Controller
             return response()->json(['error' => 'یک فرایند به‌روزرسانی در حال اجراست.'], 409);
         }
 
-        $result = $this->updater->run($request->user()?->id, 'admin-panel');
+        // حالت اجباری: تغییرات محلی در stash ذخیره و سرور با مخزن هم‌تراز می‌شود
+        $force = $request->boolean('force');
+
+        $result = $this->updater->run($request->user()?->id, $force ? 'admin-panel-force' : 'admin-panel', $force);
 
         return response()->json([
             'ok' => $result['ok'],

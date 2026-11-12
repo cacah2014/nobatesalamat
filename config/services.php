@@ -67,6 +67,9 @@ return [
             // اگر فایلی روی سرور دستی تغییر کرده باشد، قبل از pull در stash ذخیره شود
             'auto_stash' => filter_var(env('UPDATE_AUTO_STASH', true), FILTER_VALIDATE_BOOL),
 
+            // اگر git pull شکست بخورد، خودکار سرور با مخزن هم‌تراز شود (stash + reset --hard)
+            'force_reset' => filter_var(env('UPDATE_FORCE_RESET', true), FILTER_VALIDATE_BOOL),
+
             'git_remote' => env('UPDATE_GIT_REMOTE', 'origin'),
             'git_branch' => env('UPDATE_GIT_BRANCH', 'main'),
 
