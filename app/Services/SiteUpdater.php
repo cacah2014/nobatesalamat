@@ -14,9 +14,27 @@ use Throwable;
  */
 class SiteUpdater
 {
-    public function enabled(): bool
+    /**
+     * به‌روزرسانی از پنل مدیریت (فقط مدیر با دسترسی updates + CSRF).
+     * به‌صورت پیش‌فرض فعال است تا نیازی به تنظیم .env نباشد.
+     */
+    public function panelEnabled(): bool
+    {
+        return (bool) config('services.nobat.update.panel_allowed', true);
+    }
+
+    /**
+     * وب‌هوک عمومی /deploy/{token} — فقط اگر ALLOW_WEB_UPDATES=true و توکن ست شده باشد.
+     */
+    public function webhookEnabled(): bool
     {
         return (bool) config('services.nobat.update.allowed');
+    }
+
+    /** سازگاری با کدهای قبلی (وب‌هوک) */
+    public function enabled(): bool
+    {
+        return $this->webhookEnabled();
     }
 
     public function tokenMatches(?string $token): bool
@@ -77,21 +95,160 @@ class SiteUpdater
         return (string) config('services.nobat.update.composer_binary', 'composer');
     }
 
-    /** لیست دستورها به ترتیب: دریافت از گیت ← Dependency ← Database ← Code */
+    /** فرمان composer: composer.phar موجود در ریشهٔ پروژه، سپس دستور روی PATH */
+    public function composerCommand(): array
+    {
+        $phar = base_path('composer.phar');
+
+        if (is_file($phar)) {
+            return [$this->phpBinary(), $phar];
+        }
+
+        return [$this->composerBinary()];
+    }
+
+    /**
+     * لیست دستورها به ترتیب: دریافت از گیت ← Dependency ← Database ← Code
+     *
+     * هر آیتم: [مرحله، از طریق شل؟، فرمان، اجباری؟]
+     * فقط git pull اجباری است؛ بقیه اگر شکست بخورند به‌عنوان هشدار ثبت
+     * می‌شوند تا کش‌ها در هر حال پاک/بازسازی شوند.
+     */
     public function commands(): array
     {
+        $custom = trim((string) config('services.nobat.update.composer_command', ''));
+
+        $dependency = $custom !== ''
+            ? [true, $custom]
+            : [false, array_merge($this->composerCommand(), [
+                'install', '--no-dev', '--prefer-dist', '--optimize-autoloader', '--no-interaction',
+            ])];
+
         return [
-            ['git_pull', true, $this->gitCommand()],
-            ['dependency', false, [
-                $this->composerBinary(), 'install', '--no-dev', '--prefer-dist',
-                '--optimize-autoloader', '--no-interaction',
-            ]],
-            ['database', false, [$this->phpBinary(), 'artisan', 'migrate', '--force']],
-            ['code', false, [$this->phpBinary(), 'artisan', 'optimize:clear']],
-            ['code', false, [$this->phpBinary(), 'artisan', 'config:cache']],
-            ['code', false, [$this->phpBinary(), 'artisan', 'route:cache']],
-            ['code', false, [$this->phpBinary(), 'artisan', 'view:cache']],
+            ['git_pull', true, $this->gitCommand(), true],
+            ['dependency', $dependency[0], $dependency[1], false],
+            ['database', false, [$this->phpBinary(), 'artisan', 'migrate', '--force'], false],
+            ['code', false, [$this->phpBinary(), 'artisan', 'optimize:clear'], false],
+            ['code', false, [$this->phpBinary(), 'artisan', 'config:cache'], false],
+            ['code', false, [$this->phpBinary(), 'artisan', 'route:cache'], false],
+            ['code', false, [$this->phpBinary(), 'artisan', 'view:cache'], false],
         ];
+    }
+
+    /**
+     * بررسی پیش‌نیازهای به‌روزرسانی (git، composer، فایل‌های محلی).
+     *
+     * @return array<int, array{label: string, ok: bool, detail: string}>
+     */
+    public function preflight(): array
+    {
+        $checks = [];
+
+        $hasRepo = is_dir(base_path('.git'));
+        $checks[] = [
+            'label' => 'مخزن گیت',
+            'ok' => $hasRepo,
+            'detail' => $hasRepo ? 'پوشهٔ .git موجود است' : 'پوشهٔ .git پیدا نشد؛ کد باید با git clone دریافت شده باشد',
+        ];
+
+        try {
+            $checks[] = ['label' => 'دستور git', 'ok' => true, 'detail' => $this->runShell('git --version', 30)];
+        } catch (Throwable $e) {
+            $checks[] = ['label' => 'دستور git', 'ok' => false, 'detail' => 'git در PATH سرور پیدا نشد: ' . $e->getMessage()];
+        }
+
+        try {
+            $composer = $this->runProcess(array_merge($this->composerCommand(), ['--version']));
+            $checks[] = ['label' => 'Composer', 'ok' => true, 'detail' => trim($composer)];
+        } catch (Throwable $e) {
+            $checks[] = [
+                'label' => 'Composer',
+                'ok' => false,
+                'detail' => 'composer پیدا نشد (مرحلهٔ Dependency با هشدار رد می‌شود): ' . $e->getMessage(),
+            ];
+        }
+
+        try {
+            $phpVersion = trim($this->runProcess([$this->phpBinary(), '-v']));
+            $checks[] = [
+                'label' => 'PHP CLI',
+                'ok' => str_contains($phpVersion, 'PHP '),
+                'detail' => $phpVersion === '' ? 'php در سرور اجرا نشد' : strtok($phpVersion, "\n"),
+            ];
+        } catch (Throwable $e) {
+            $checks[] = [
+                'label' => 'PHP CLI',
+                'ok' => false,
+                'detail' => 'اجرای ' . $this->phpBinary() . ' ممکن نشد (متغیر UPDATE_PHP_BINARY را تنظیم کنید): ' . $e->getMessage(),
+            ];
+        }
+
+        foreach (['storage/framework/views', 'bootstrap/cache'] as $dir) {
+            $path = base_path($dir);
+            $checks[] = [
+                'label' => 'نوشتن در ' . $dir,
+                'ok' => is_dir($path) && is_writable($path),
+                'detail' => is_dir($path)
+                    ? (is_writable($path) ? 'قابل نوشتن است' : 'قابل نوشتن نیست؛ دسترسی پوشه را در ویندوز/هاست اصلاح کنید')
+                    : 'پوشه وجود ندارد',
+            ];
+        }
+
+        try {
+            $status = $this->runShell('git status --porcelain', 60);
+            $checks[] = [
+                'label' => 'تغییرات محلی',
+                'ok' => $status === '',
+                'detail' => $status === ''
+                    ? 'فایلی تغییر نکرده است'
+                    : 'این فایل‌ها با git pull تداخل می‌کنند: ' . preg_replace('/\s+/', ' ', $status),
+            ];
+        } catch (Throwable $e) {
+            $checks[] = ['label' => 'تغییرات محلی', 'ok' => false, 'detail' => $e->getMessage()];
+        }
+
+        return $checks;
+    }
+
+    /**
+     * مقایسهٔ نسخهٔ سرور با مخزن (بدون پنهان‌کردن خطاها).
+     *
+     * @return array{ok: bool, error: string|null, behind: int|null, local: string|null, remote: string|null, commits: array<int, string>}
+     */
+    public function pendingInfo(): array
+    {
+        $remote = sprintf('%s/%s', $this->gitRemote(), $this->gitBranch());
+
+        try {
+            $this->runShell(sprintf('git fetch %s --prune', escapeshellarg($this->gitRemote())), 180);
+
+            $local = $this->runShell('git rev-parse --short HEAD', 30);
+            $remoteHead = $this->runShell(sprintf('git rev-parse --short %s', escapeshellarg($remote)), 30);
+            $behind = (int) trim($this->runShell(sprintf(
+                'git rev-list --count HEAD..%s',
+                escapeshellarg($remote)
+            ), 60));
+
+            $list = $this->runShell(sprintf('git log --oneline HEAD..%s', escapeshellarg($remote)), 60);
+
+            return [
+                'ok' => true,
+                'error' => null,
+                'behind' => $behind,
+                'local' => trim($local),
+                'remote' => trim($remoteHead),
+                'commits' => $list === '' ? [] : array_values(array_filter(array_map('trim', explode("\n", $list)))),
+            ];
+        } catch (Throwable $e) {
+            return [
+                'ok' => false,
+                'error' => $e->getMessage(),
+                'behind' => null,
+                'local' => null,
+                'remote' => null,
+                'commits' => [],
+            ];
+        }
     }
 
     public function runningLog(): ?UpdateLog
@@ -114,28 +271,13 @@ class SiteUpdater
     /** خواندن کامیت‌های جدیدِ روی مخزن که هنوز روی سرور نیستند */
     public function pendingCommits(): array
     {
-        try {
-            $this->runShell(sprintf('git fetch %s --prune', escapeshellarg($this->gitRemote())));
-            $output = $this->runShell(sprintf(
-                'git log --oneline HEAD..%s/%s',
-                escapeshellarg($this->gitRemote()),
-                escapeshellarg($this->gitBranch())
-            ));
-        } catch (Throwable) {
-            return [];
-        }
-
-        if ($output === '') {
-            return [];
-        }
-
-        return array_values(array_filter(array_map('trim', explode("\n", $output))));
+        return $this->pendingInfo()['commits'];
     }
 
     /**
      * اجرای کامل به‌روزرسانی.
      *
-     * @return array{ok: bool, log: UpdateLog, output: array<int, string>, error: string|null}
+     * @return array{ok: bool, log: UpdateLog, output: array<int, string>, error: string|null, warnings: array<int, string>}
      */
     public function run(?int $adminId = null, string $trigger = 'panel'): array
     {
@@ -154,9 +296,23 @@ class SiteUpdater
             $log->update(['current_step' => $step, 'output' => implode("\n\n", $output)]);
         };
 
+        $warnings = [];
+
         try {
-            foreach ($this->commands() as [$step, $viaShell, $command]) {
-                $save($step, $viaShell ? $this->runShell($command) : $this->runProcess($command));
+            foreach ($this->commands() as [$step, $viaShell, $command, $required]) {
+                try {
+                    $save($step, $viaShell ? $this->runShell($command) : $this->runProcess($command));
+                } catch (Throwable $e) {
+                    $message = trim($e->getMessage()) ?: 'خطای نامشخص';
+
+                    if ($required) {
+                        throw $e;
+                    }
+
+                    // مرحلهٔ غیرحیاتی: ثبت هشدار و ادامه تا کش‌ها در هر حال بازسازی شوند
+                    $warnings[] = "{$step}: {$message}";
+                    $save($step, '[هشدار] ' . $message);
+                }
             }
 
             $final = config('services.nobat.update.final_command');
@@ -165,13 +321,13 @@ class SiteUpdater
 
             $log->update(['status' => 'success', 'current_step' => 'completed', 'finished_at' => now()]);
 
-            return ['ok' => true, 'log' => $log, 'output' => $output, 'error' => null];
+            return ['ok' => true, 'log' => $log, 'output' => $output, 'error' => null, 'warnings' => $warnings];
         } catch (Throwable $e) {
             $message = trim($e->getMessage()) ?: 'خطای نامشخص';
             $output[] = "[ERROR]\n{$message}";
             $log->update(['status' => 'failed', 'output' => implode("\n\n", $output), 'finished_at' => now()]);
 
-            return ['ok' => false, 'log' => $log, 'output' => $output, 'error' => $message];
+            return ['ok' => false, 'log' => $log, 'output' => $output, 'error' => $message, 'warnings' => $warnings];
         }
     }
 

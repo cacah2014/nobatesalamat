@@ -101,6 +101,23 @@ php artisan optimize
 
 برای امنیت، این قابلیت فقط با `ALLOW_WEB_UPDATES=true` فعال می‌شود و خروجی هر مرحله در جدول `update_logs` ثبت می‌گردد.
 
+## به‌روزرسانی از داخل پنل (بدون EnvKit)
+
+از نسخهٔ اخیر، دکمهٔ **«شروع به‌روزرسانی پروژه»** در پنل (منو → بروزرسانی پروژه) به‌صورت **پیش‌فرض فعال** است و به `ALLOW_WEB_UPDATES` نیازی ندارد؛ چون فقط مدیر با دسترسی `updates` و با CSRF می‌تواند آن را اجرا کند. وب‌هوک عمومی `/deploy/{token}` همچنان به `ALLOW_WEB_UPDATES=true` + توکن نیاز دارد.
+
+کارهایی که این دکمه انجام می‌دهد (به ترتیب):
+
+1. `git pull --ff-only origin main` (یا `UPDATE_GIT_COMMAND`)
+2. `composer install --no-dev --optimize-autoloader` — اگر composer نبود، `composer.phar` ریشهٔ پروژه استفاده می‌شود؛ نبودنش فقط **هشدار** است
+3. `php artisan migrate --force`
+4. `php artisan optimize:clear` → `config:cache` → `route:cache` → `view:cache`
+
+فقط مرحلهٔ Git اجباری است؛ بقیه اگر شکست بخورند هشدار ثبت می‌شوند تا کش‌ها در هر حال بازسازی شوند.
+
+صفحهٔ بروزرسانی، **پیش‌نیازها** را هم نشان می‌دهد: وجود مخزن `.git`، دستور `git`، Composer، اجرای PHP CLI، قابل‌نوشتن‌بودن `storage/framework/views` و `bootstrap/cache`، و فایل‌های تغییر‌یافتهٔ محلی که `git pull` را متوقف می‌کنند. اگر نوشته «وضعیت مخزن خوانده نشد»، متن خطا همان‌جا نمایش داده می‌شود (مثلاً نبودن git در PATH ویندوز یا خطای `dubious ownership`).
+
+متغیرهای مرتبط: `ALLOW_PANEL_UPDATES` (پیش‌فرض true)، `UPDATE_GIT_COMMAND`، `UPDATE_GIT_REMOTE`/`UPDATE_GIT_BRANCH`، `UPDATE_PHP_BINARY`، `UPDATE_COMPOSER_BINARY`، `UPDATE_COMPOSER_COMMAND`، `UPDATE_TIMEOUT`، `UPDATE_FINAL_COMMAND`.
+
 ## ورود مدیر اصلی سایت
 
 > **نکتهٔ مهم:** شمارهٔ `09364528962` در `config/services.php` به‌عنوان `OWNER_PHONE` **همیشه** مدیر ارشد است — حتی اگر `ADMIN_PHONE` در `.env` قدیمی مانده باشد. سه لایهٔ محافظ این را تضمین می‌کنند:

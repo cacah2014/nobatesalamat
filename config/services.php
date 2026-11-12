@@ -46,7 +46,14 @@ return [
         | وب‌هوک/دستور artisan را صدا بزند.
         */
         'update' => [
+            // وب‌هوک عمومی /deploy/{token} — نیازمند true شدن صریح در .env
             'allowed' => filter_var(env('ALLOW_WEB_UPDATES', false), FILTER_VALIDATE_BOOL),
+
+            // به‌روزرسانی از داخل پنل مدیریت (فقط مدیر با دسترسی updates) — پیش‌فرض فعال
+            'panel_allowed' => filter_var(env('ALLOW_PANEL_UPDATES', true), FILTER_VALIDATE_BOOL),
+
+            // فرمان دلخواه composer (اختیاری، برای سرورهایی که composer در PATH نیست)
+            'composer_command' => env('UPDATE_COMPOSER_COMMAND'),
 
             // توکن مشترک با EnvKit؛ اگر خالی باشد وب‌هوک غیرفعال است
             'token' => env('DEPLOY_WEBHOOK_TOKEN'),
