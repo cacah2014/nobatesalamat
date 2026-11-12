@@ -51,7 +51,8 @@
 
 @push('scripts')
 <script>
-document.getElementById('update-btn')?.addEventListener('click', async function () {
+var updateBtn = document.getElementById('update-btn');
+if (updateBtn) updateBtn.addEventListener('click', async function () {
     if (!confirm('ابتدا git pull و سپس چهار مرحله به‌روزرسانی اجرا شود؟')) return;
     this.disabled = true;
     this.textContent = 'در حال اجرا...';
@@ -66,7 +67,7 @@ document.getElementById('update-btn')?.addEventListener('click', async function 
         const data = await response.json();
         message.className = 'mt-3 rounded-xl px-3 py-2 text-[10px] font-bold ' + (response.ok ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600');
         message.textContent = response.ok ? 'به‌روزرسانی با موفقیت کامل شد.' : (data.error || 'ناموفق بود.');
-        if (data.output?.length) {
+        if (data.output && data.output.length) {
             const pre = document.getElementById('update-output');
             pre.textContent = data.output.join('\n\n');
             pre.classList.remove('hidden');

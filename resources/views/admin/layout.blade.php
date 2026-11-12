@@ -6,9 +6,8 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="robots" content="noindex, nofollow">
     <title>@yield('title') | مدیریت نوبت سلامت</title>
-    <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>tailwind.config = { theme: { extend: { fontFamily: { sans: ['Vazirmatn', 'Tahoma', 'sans-serif'] }, colors: { brand: '#0d9488', coral: '#ff6b57' } } } };</script>
+    <link rel="preload" href="{{ asset('fonts/vazirmatn-variable.woff2') }}" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="{{ asset('css/app.css') }}?v={{ file_exists(public_path('css/app.css')) ? filemtime(public_path('css/app.css')) : '1' }}">
     <style>
         .btn-primary { display: inline-flex; align-items: center; gap: .5rem; border-radius: .8rem; padding: .6rem 1.1rem; color: #fff; font-weight: 800; font-size: .75rem; background: linear-gradient(135deg, #14b8a6, #0d9488 55%, #0f766e); box-shadow: 0 8px 20px rgba(13,148,136,.28); transition: .18s; border: 0; cursor: pointer; }
         .btn-primary:hover { transform: translateY(-2px); }

@@ -111,7 +111,8 @@
 @auth
 @push('scripts')
 <script>
-document.getElementById('booking-form')?.addEventListener('submit', async function (event) {
+var bookingForm = document.getElementById('booking-form');
+if (bookingForm) bookingForm.addEventListener('submit', async function (event) {
     event.preventDefault();
     const message = document.getElementById('booking-message');
     message.className = 'hidden';

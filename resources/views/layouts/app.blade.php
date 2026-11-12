@@ -17,24 +17,11 @@
     <meta name="theme-color" content="#0d9488">
     @yield('head')
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        brand: { DEFAULT: '#0d9488', dark: '#0f766e', bright: '#14b8a6' },
-                        coral: '#ff6b57',
-                        ink: '#0f3538',
-                        cream: '#fbfaf6',
-                    },
-                    fontFamily: { sans: ['Vazirmatn', 'Tahoma', 'sans-serif'] },
-                },
-            },
-        };
-    </script>
+    {{-- CSS و فونت به‌صورت محلی سرو می‌شوند (بدون CDN)؛ قبلاً اسکریپت مسدودکنندهٔ
+         cdn.tailwindcss.com و استایل jsDelivr در head لود می‌شد و در شبکه‌هایی که
+         به این دامنه‌ها دسترسی ندارند صفحه بالا نمی‌آمد. --}}
+    <link rel="preload" href="{{ asset('fonts/vazirmatn-variable.woff2') }}" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="{{ asset('css/app.css') }}?v={{ file_exists(public_path('css/app.css')) ? filemtime(public_path('css/app.css')) : '1' }}">
     <style>
         body { background: #fbfaf6; }
         .hero-vibrant {

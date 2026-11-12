@@ -101,6 +101,32 @@ php artisan optimize
 
 برای امنیت، این قابلیت فقط با `ALLOW_WEB_UPDATES=true` فعال می‌شود و خروجی هر مرحله در جدول `update_logs` ثبت می‌گردد.
 
+## استایل و فونت‌ها بدون CDN (رفع «سایت بالا نمی‌آید» روی بعضی دستگاه‌ها)
+
+قبلاً Tailwind و فونت وزیرمتن از CDN خارجی در `<head>` لود می‌شدند (`cdn.tailwindcss.com` و `cdn.jsdelivr.net`). در شبکه‌هایی که به این دامنه‌ها دسترسی ندارند، همان دو خط **رندر صفحه را قفل می‌کردند** و سایت روی بعضی گوشی‌ها/کامپیوترها بالا نمی‌آمد؛ ضمناً Tailwind CDN کل استایل را در مرورگر می‌ساخت که روی گوشی‌های ضعیف کند است.
+
+اکنون همه چیز محلی است:
+
+```
+public/css/app.css                  ← CSS کامپایل‌شده (۳۳KB، بدون CDN)
+public/fonts/vazirmatn-variable.woff2 ← فونت (۱۰۹KB، متغیر ۱۰۰–۹۰۰)
+resources/css/app.css               ← منبع Tailwind
+tailwind.config.js                  ← رنگ‌های brand/coral/ink/cream
+```
+
+بعد از تغییر کلاس‌های Tailwind در Bladeها، CSS را دوباره بسازید (نیاز به Node فقط روی سیستم توسعه):
+
+```bash
+npx tailwindcss@3.4.17 -i resources/css/app.css -o public/css/app.css --minify
+```
+
+بررسی سریع روی سرور:
+
+```bash
+curl -I https://دامنه/css/app.css      # باید 200 با type text/css
+curl -I https://دامنه/fonts/vazirmatn-variable.woff2
+```
+
 ## خطای «حساب شما غیرفعال است»
 
 این پیام یعنی مقدار ستون `status` آن کاربر `active` نیست — یا `NULL` است (مثلاً جدول `users` از نسخهٔ قدیمی پروژه مانده و مهاجرت اجرا نشده).

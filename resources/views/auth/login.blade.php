@@ -68,19 +68,29 @@ async function post(url, payload) {
         data = {};
     }
 
-    if (response.status === 419) data = { ...data, error: 'نشست شما منقضی شده است؛ صفحه را یک‌بار رفرش کنید.' };
+    if (response.status === 419 && !data.error) {
+        data.error = 'نشست شما منقضی شده است؛ صفحه را یک‌بار رفرش کنید.';
+    }
 
     return { status: response.status, data };
 }
 
 // پیام خطای قابل فهم از هر شکلی از پاسخ سرور
 function friendlyError(data, fallback) {
-    const raw = data?.error || data?.message || '';
-    if (!raw && data?.errors) {
-        const first = Object.values(data.errors)[0];
-        if (first) return Array.isArray(first) ? first[0] : first;
+    data = data || {};
+    var raw = data.error || data.message || '';
+
+    if (!raw && data.errors) {
+        for (var key in data.errors) {
+            if (Object.prototype.hasOwnProperty.call(data.errors, key)) {
+                var first = data.errors[key];
+                if (first) return Array.isArray(first) ? first[0] : first;
+            }
+        }
     }
+
     if (/Too Many Attempts/i.test(raw)) return 'تعداد درخواست‌ها زیاد شد؛ یک دقیقه صبر کنید.';
+
     return raw || fallback;
 }
 
