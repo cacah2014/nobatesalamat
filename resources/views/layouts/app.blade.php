@@ -15,6 +15,13 @@
     <meta property="og:url" content="{{ url()->current() }}">
     <meta property="og:image" content="@yield('og_image', asset('images/og-image.jpg'))">
     <meta name="theme-color" content="#0d9488">
+
+    {{-- نماد اعتماد الکترونیکی (ای‌نماد) — کد از پنل → محتوای سایت قابل تغییر است --}}
+    @php($enamadCode = trim(\App\Models\SiteSetting::get('enamad_code', '57649165')))
+    @if($enamadCode !== '')
+        <meta name="enamad" content="{{ $enamadCode }}">
+    @endif
+
     @yield('head')
 
     {{-- CSS و فونت به‌صورت محلی سرو می‌شوند (بدون CDN)؛ قبلاً اسکریپت مسدودکنندهٔ
