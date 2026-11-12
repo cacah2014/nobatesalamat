@@ -11,6 +11,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\View\View;
 
@@ -145,11 +146,21 @@ class PhoneAuthController extends Controller
             return response()->json(['error' => 'حساب شما غیرفعال است. برای پیگیری با پشتیبانی تماس بگیرید.'], 403);
         }
 
-        // «مرا به خاطر بسپار» به ستون remember_token نیاز دارد؛ اگر هنوز
-        // مایگریشن اجرا نشده باشد، ورود بدون آن انجام می‌شود تا کاربر
-        // به‌جای خطای ۵۰۰، عادی وارد شود.
+        // «مرا به خاطر بسپار» به ستون remember_token نیاز دارد. اگر آن ستون
+        // وجود نداشته باشد، فقط نوشتن کوکی مشکل نیست: در *درخواست بعدی*
+        // Laravel کوکی را می‌خواند و کوئری روی ستون ناموجود خطای SQL می‌دهد
+        // (همان ۵۰۰ یک‌بارهٔ بعد از ورود که با رفرش خوب می‌شد).
+        // پس اگر ستون نباشد، از remember استفاده نمی‌کنیم.
+        $remember = false;
+
         try {
-            Auth::login($user, remember: true);
+            $remember = Schema::hasColumn('users', 'remember_token');
+        } catch (\Throwable) {
+            $remember = false;
+        }
+
+        try {
+            Auth::login($user, remember: $remember);
         } catch (\Throwable $e) {
             report($e);
             Auth::login($user);
