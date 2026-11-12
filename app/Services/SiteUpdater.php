@@ -296,7 +296,7 @@ class SiteUpdater
      *
      * @return array{ok: bool, log: UpdateLog, output: array<int, string>, error: string|null, warnings: array<int, string>}
      */
-    public function run(?int $adminId = null, string $trigger = 'panel'): array
+    public function run(?int $adminId = null, string $trigger = 'panel', bool $force = false): array
     {
         $log = UpdateLog::create([
             'admin_id' => $adminId,
@@ -315,9 +315,17 @@ class SiteUpdater
 
         $warnings = [];
         $stashName = null;
+        $commands = $this->commands();
 
         try {
-            foreach ($this->commands() as [$step, $viaShell, $command, $required]) {
+            // حالت اجباری: سرور را دقیقاً با مخزن هم‌تراز کن (تغییرات محلی stash می‌شوند)
+            if ($force) {
+                $save('git_pull', $this->hardSync());
+                $warnings[] = 'به‌روزرسانی اجباری اجرا شد؛ تغییرات محلی در stash ذخیره شد.';
+                $commands = array_values(array_filter($commands, fn ($item) => $item[0] !== 'git_pull'));
+            }
+
+            foreach ($commands as [$step, $viaShell, $command, $required]) {
                 // قبل از دریافت نسخهٔ جدید، تغییرات محلی سرور را در stash نگه می‌داریم
                 // تا git pull با خطای «local changes would be overwritten» متوقف نشود.
                 if ($step === 'git_pull' && $stashName === null) {
@@ -334,6 +342,15 @@ class SiteUpdater
                     $message = trim($e->getMessage()) ?: 'خطای نامشخص';
 
                     if ($required) {
+                        // خودترمیمی: اگر git pull به‌خاطر تغییرات محلی/اختلاف پایان خط
+                        // شکست بخورد، سرور را با مخزن هم‌تراز می‌کنیم (پس از stash).
+                        if ($step === 'git_pull' && (bool) config('services.nobat.update.force_reset', true)) {
+                            $warnings[] = 'git pull ناموفق بود؛ هم‌ترازی سخت با مخزن اجرا شد.';
+                            $save($step, '[بازیابی خودکار] ' . $message . "\n\n" . $this->hardSync());
+
+                            continue;
+                        }
+
                         throw $e;
                     }
 
@@ -361,6 +378,54 @@ class SiteUpdater
             $log->update(['status' => 'failed', 'output' => implode("\n\n", $output), 'finished_at' => now()]);
 
             return ['ok' => false, 'log' => $log, 'output' => $output, 'error' => $message, 'warnings' => $warnings];
+        }
+    }
+
+    /**
+     * هم‌ترازی سخت سرور با مخزن: stash تغییرات محلی → fetch → reset --hard.
+     *
+     * مخصوص زمانی که `git pull` به‌خاطر «local changes would be overwritten»
+     * یا اختلاف پایان خط (CRLF ویندوز) متوقف می‌شود.
+     */
+    public function hardSync(): string
+    {
+        $remote = $this->gitRemote();
+        $branch = $this->gitBranch();
+
+        $lines = [];
+
+        $lines[] = 'git config core.autocrlf=false → ' . $this->tryCommand('git config core.autocrlf false');
+        $lines[] = 'git config core.eol=lf → ' . $this->tryCommand('git config core.eol lf');
+
+        if ($this->localChanges() !== []) {
+            $name = 'auto-stash-' . now()->format('Ymd-His');
+            $lines[] = 'git stash -u → ' . $this->tryCommand(
+                'git stash push --include-untracked -m ' . escapeshellarg($name)
+            );
+            $lines[] = 'تغییرات محلی در stash ذخیره شد: ' . $name;
+        }
+
+        $lines[] = 'git fetch → ' . $this->tryCommand(
+            'git fetch ' . escapeshellarg($remote) . ' --prune'
+        );
+
+        $lines[] = 'git reset --hard ' . $remote . '/' . $branch . ' → ' . $this->tryCommand(
+            'git reset --hard ' . escapeshellarg($remote . '/' . $branch)
+        );
+
+        $lines[] = 'HEAD → ' . $this->tryCommand('git log -1 --oneline');
+        $lines[] = 'git stash list → ' . $this->tryCommand('git stash list');
+
+        return implode("\n", array_filter($lines, fn (string $line) => trim($line) !== ''));
+    }
+
+    /** اجرای فرمان گیت که خطا دادنش کل فرایند را متوقف نمی‌کند */
+    private function tryCommand(string $command, int $timeout = 180): string
+    {
+        try {
+            return trim($this->runShell($command, $timeout)) ?: 'ok';
+        } catch (Throwable $e) {
+            return '[رد شد] ' . $e->getMessage();
         }
     }
 

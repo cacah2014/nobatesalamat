@@ -131,6 +131,31 @@ error: Your local changes to the following files would be overwritten by merge
 - برگرداندن آن‌ها: `git stash pop`
 - غیرفعال‌کردن این رفتار: `UPDATE_AUTO_STASH=false`
 
+## گیرکردن به‌روزرسانی روی «local changes would be overwritten»
+
+اگر روی سرور فایلی (مثل `.gitignore`) تغییر کرده باشد یا اختلاف پایان خط ویندوز (CRLF) باشد، `git pull` با این خطا متوقف می‌شود:
+
+```
+error: Your local changes to the following files would be overwritten by merge
+Aborting
+```
+
+سه لایه برای حل این وضعیت وجود دارد:
+
+1. **خودکار (پیش‌فرض):** قبل از pull، تغییرات محلی با `git stash push --include-untracked` ذخیره و بعد pull انجام می‌شود (`UPDATE_AUTO_STASH`).
+2. **بازیابی خودکار:** اگر pull باز هم شکست بخورد، سرور با `git config core.autocrlf false` + `git fetch` + `git reset --hard origin/main` هم‌تراز می‌شود (`UPDATE_FORCE_RESET`).
+3. **دکمهٔ «به‌روزرسانی اجباری»** در پنل: همان هم‌ترازی سخت را از ابتدا اجرا می‌کند (تغییرات محلی اول stash می‌شود، پس پاک نمی‌شود).
+
+بازیابی تغییرات ذخیره‌شده روی سرور:
+
+```bash
+git stash list
+git stash show -p stash@{0}
+git stash pop            # برگرداندن آخرین stash
+```
+
+نکته: فایل `.gitattributes` با `* text=auto eol=lf` در مخزن هست تا فایل‌ها همیشه با LF نگه داشته شوند و ویندوز آن‌ها را «تغییرکرده» نشان ندهد.
+
 ## به‌روزرسانی از داخل پنل (بدون EnvKit)
 
 از نسخهٔ اخیر، دکمهٔ **«شروع به‌روزرسانی پروژه»** در پنل (منو → بروزرسانی پروژه) به‌صورت **پیش‌فرض فعال** است و به `ALLOW_WEB_UPDATES` نیازی ندارد؛ چون فقط مدیر با دسترسی `updates` و با CSRF می‌تواند آن را اجرا کند. وب‌هوک عمومی `/deploy/{token}` همچنان به `ALLOW_WEB_UPDATES=true` + توکن نیاز دارد.

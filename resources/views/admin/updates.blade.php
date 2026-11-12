@@ -42,7 +42,22 @@
         <p class="mt-5 rounded-xl bg-amber-50 p-3 text-[10px] leading-5 text-amber-800">⚠ به‌روزرسانی از پنل غیرفعال شده است (متغیر <code dir="ltr">ALLOW_PANEL_UPDATES=false</code>). برای فعال‌کردن آن را حذف کنید یا <code dir="ltr">true</code> بگذارید.</p>
     @endunless
 
-    <button id="update-btn" class="btn-primary mt-5" {{ ! $enabled ? 'disabled style=opacity:.5' : '' }}>شروع به‌روزرسانی پروژه</button>
+    @if(! empty($localChanges))
+        <div class="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-3.5 text-[10px] leading-5 text-amber-900">
+            <b class="block text-[11px]">⚠ این فایل‌ها روی سرور تغییر کرده‌اند و `git pull` را متوقف می‌کنند:</b>
+            <ul dir="ltr" class="mt-2 space-y-1 font-mono">
+                @foreach($localChanges as $change)
+                    <li>{{ $change }}</li>
+                @endforeach
+            </ul>
+            <p class="mt-2">با «به‌روزرسانی معمولی» این فایل‌ها خودکار در <code dir="ltr">git stash</code> ذخیره و سپس pull می‌شوند؛ اگر باز هم گیر کرد، «به‌روزرسانی اجباری» را بزنید.</p>
+        </div>
+    @endif
+
+    <div class="mt-5 flex flex-wrap gap-2">
+        <button id="update-btn" data-update-mode="safe" class="btn-primary" {{ ! $enabled ? 'disabled style=opacity:.5' : '' }}>شروع به‌روزرسانی پروژه</button>
+        <button id="update-force-btn" data-update-mode="force" class="rounded-xl border border-[#f0c9bf] bg-[#fff4f1] px-4 py-2.5 text-xs font-black text-[#b4442c]" {{ ! $enabled ? 'disabled style=opacity:.5' : '' }}>به‌روزرسانی اجباری (نادیده‌گرفتن تغییرات محلی)</button>
+    </div>
     <p id="update-message" class="mt-3 hidden rounded-xl px-3 py-2 text-[10px] font-bold"></p>
 </div>
 
@@ -63,36 +78,82 @@
 
 @push('scripts')
 <script>
-var updateBtn = document.getElementById('update-btn');
-if (updateBtn) updateBtn.addEventListener('click', async function () {
-    if (!confirm('ابتدا git pull و سپس چهار مرحله به‌روزرسانی اجرا شود؟')) return;
-    this.disabled = true;
-    this.textContent = 'در حال اجرا...';
-    document.querySelectorAll('[id^="step-"]').forEach((el) => el.classList.add('animate-pulse', 'bg-[#f0faf7]'));
-    const message = document.getElementById('update-message');
+var updateButtons = document.querySelectorAll('[data-update-mode]');
+
+for (var i = 0; i < updateButtons.length; i++) {
+    updateButtons[i].addEventListener('click', function () {
+        var force = this.getAttribute('data-update-mode') === 'force';
+        var question = force
+            ? 'تغییرات محلی سرور در stash ذخیره شود و سرور دقیقاً با مخزن هم‌تراز گردد؟'
+            : 'ابتدا git pull و سپس مراحل Dependency، Database، Code و Update اجرا شود؟';
+
+        if (!confirm(question)) {
+            return;
+        }
+
+        runUpdate(this, force);
+    });
+}
+
+async function runUpdate(button, force) {
+    var allButtons = document.querySelectorAll('[data-update-mode]');
+
+    for (var j = 0; j < allButtons.length; j++) {
+        allButtons[j].disabled = true;
+    }
+
+    button.textContent = force ? 'در حال هم‌ترازی با مخزن...' : 'در حال اجرا...';
+
+    var steps = document.querySelectorAll('[id^="step-"]');
+    for (var s = 0; s < steps.length; s++) {
+        steps[s].classList.add('animate-pulse', 'bg-[#f0faf7]');
+    }
+
+    var message = document.getElementById('update-message');
     message.className = 'hidden';
+
     try {
-        const response = await fetch('{{ route('admin.update.run') }}', {
+        var response = await fetch('{{ route('admin.update.run') }}', {
             method: 'POST',
-            headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Accept': 'application/json' },
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ force: force })
         });
-        const data = await response.json();
-        message.className = 'mt-3 rounded-xl px-3 py-2 text-[10px] font-bold ' + (response.ok ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600');
+
+        var data = await response.json();
         var text = response.ok ? 'به‌روزرسانی با موفقیت کامل شد.' : (data.error || 'ناموفق بود.');
+
         if (data.warnings && data.warnings.length) {
             text += ' · هشدار: ' + data.warnings.join(' | ');
         }
+
+        message.className = 'mt-3 rounded-xl px-3 py-2 text-[10px] font-bold ' + (response.ok ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600');
         message.textContent = text;
+
         if (data.output && data.output.length) {
-            const pre = document.getElementById('update-output');
+            var pre = document.getElementById('update-output');
             pre.textContent = data.output.join('\n\n');
             pre.classList.remove('hidden');
         }
+    } catch (error) {
+        message.className = 'mt-3 rounded-xl bg-red-50 px-3 py-2 text-[10px] font-bold text-red-600';
+        message.textContent = 'ارتباط با سرور برقرار نشد. دوباره تلاش کنید.';
     } finally {
-        this.textContent = 'شروع به‌روزرسانی پروژه';
-        document.querySelectorAll('[id^="step-"]').forEach((el) => el.classList.remove('animate-pulse'));
+        button.textContent = force ? 'به‌روزرسانی اجباری (نادیده‌گرفتن تغییرات محلی)' : 'شروع به‌روزرسانی پروژه';
+
+        for (var k = 0; k < allButtons.length; k++) {
+            allButtons[k].disabled = false;
+        }
+
+        for (var m = 0; m < steps.length; m++) {
+            steps[m].classList.remove('animate-pulse');
+        }
+
         location.reload();
     }
-});
+}
 </script>
 @endpush
