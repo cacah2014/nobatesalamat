@@ -3,7 +3,7 @@
 @section('title', $doctor->full_name . ' | رزرو نوبت آنلاین | نوبت سلامت')
 @section('meta_description', $doctor->title . ' در ' . $doctor->city . '؛ امتیاز ' . fa_digits($doctor->rating) . ' از ' . fa_digits($doctor->reviews_count) . ' نظر بیماران؛ رزرو نوبت در نوبت سلامت.')
 @section('canonical', route('doctors.show', $doctor))
-@section('og_image', $doctor->image_url)
+@section('og_image', media_url($doctor->image_url))
 @section('og_type', 'profile')
 
 @section('content')
@@ -12,7 +12,7 @@
         <div class="rounded-[26px] border border-[#e0ebe9] bg-white p-5 sm:p-7">
             <div class="flex flex-col gap-6 sm:flex-row">
                 <div class="relative mx-auto h-48 w-40 shrink-0 overflow-hidden rounded-[22px] bg-[#dcefeb] sm:mx-0">
-                    <img src="{{ $doctor->image_url }}" alt="{{ $doctor->full_name }}" class="h-full w-full object-cover object-top">
+                    <img src="{{ media_url($doctor->image_url) }}" alt="{{ $doctor->full_name }}" class="h-full w-full object-cover object-top">
                 </div>
                 <div class="flex-1">
                     <span class="rounded-full bg-[#e9f8f4] px-2.5 py-1 text-[10px] font-black text-brand">{{ $doctor->specialty->title }}</span>
@@ -100,7 +100,7 @@
 <script type="application/ld+json">
 {!! json_encode([
     '@context' => 'https://schema.org', '@type' => 'Physician',
-    'name' => $doctor->full_name, 'image' => $doctor->image_url, 'url' => route('doctors.show', $doctor),
+    'name' => $doctor->full_name, 'image' => media_url($doctor->image_url), 'url' => route('doctors.show', $doctor),
     'medicalSpecialty' => $doctor->specialty->title, 'description' => $doctor->about,
     'address' => ['@type' => 'PostalAddress', 'addressLocality' => $doctor->city, 'streetAddress' => $doctor->address, 'addressCountry' => 'IR'],
     'aggregateRating' => ['@type' => 'AggregateRating', 'ratingValue' => $doctor->rating, 'reviewCount' => $doctor->reviews_count, 'bestRating' => 5, 'worstRating' => 1],

@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Article;
 use App\Models\Doctor;
+use App\Models\Faq;
 use App\Models\SiteSetting;
 use App\Models\Specialty;
 use App\Models\User;
@@ -30,8 +31,26 @@ class DatabaseSeeder extends Seeder
             ];
 
             foreach ($settings as [$key, $value, $label, $group]) {
-                SiteSetting::create(compact('key', 'value', 'label', 'group'));
+                SiteSetting::create(compact('key', 'value', 'label', 'group') + ['type' => 'text']);
             }
+
+            // کلید تصویری نمونه (از پنل قابل آپلود است)
+            SiteSetting::firstOrCreate(
+                ['key' => 'hero_image'],
+                ['value' => '', 'label' => 'تصویر اصلی صفحهٔ اصلی', 'group' => 'homepage', 'type' => 'image']
+            );
+        }
+
+        // ---------- سؤالات متداول ----------
+        if (Faq::count() === 0) {
+            Faq::insert([
+                ['question' => 'چطور از نوبت سلامت نوبت آنلاین بگیرم؟', 'answer' => 'پزشک یا تخصص موردنظر را جست‌وجو کنید، زمان آزاد را انتخاب و با شماره موبایل وارد شوید؛ نوبت شما با کد رهگیری قطعی می‌شود.', 'sort_order' => 1, 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
+                ['question' => 'آیا برای ورود رمز عبور لازم است؟', 'answer' => 'خیر؛ ورود فقط با شماره موبایل و کد تأیید پیامکی انجام می‌شود.', 'sort_order' => 2, 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
+                ['question' => 'امکان لغو نوبت وجود دارد؟', 'answer' => 'بله؛ از بخش «نوبت‌های من» در پنل کاربری می‌توانید نوبت را لغو کنید.', 'sort_order' => 3, 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
+                ['question' => 'مشاوره آنلاین چگونه برگزار می‌شود؟', 'answer' => 'پزشکانی که نشان «مشاوره آنلاین» دارند پاسخ‌گوی غیرحضوری هستند؛ جزئیات پس از ثبت نوبت ارسال می‌شود.', 'sort_order' => 4, 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
+                ['question' => 'هزینه ویزیت چگونه مشخص است؟', 'answer' => 'مبلغ دقیق روی پروفایل هر پزشک و پیش از ثبت نهایی نمایش داده می‌شود.', 'sort_order' => 5, 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
+                ['question' => 'اطلاعات پزشکان چگونه تأیید می‌شود؟', 'answer' => 'مدارک و شماره نظام پزشکی پیش از فعال‌شدن پروفایل بررسی می‌شود و نظرات فقط از مراجعان تأییدشده است.', 'sort_order' => 6, 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
+            ]);
         }
 
         // ---------- تخصص‌ها ----------

@@ -117,6 +117,9 @@ if (! function_exists('admin_menu')) {
             ['admin.dashboard', 'نمای کلی', true],
             ['admin.content', 'محتوای سایت', $can('content')],
             ['admin.doctors', 'مدیریت پزشکان', $can('doctors')],
+            ['admin.specialties', 'حوزه‌های کاری', $can('doctors')],
+            ['admin.articles', 'مقالات', $can('content')],
+            ['admin.faqs', 'سؤالات متداول', $can('content')],
             ['admin.appointments', 'مدیریت نوبت‌ها', $can('appointments')],
             ['admin.admins', 'مدیران و دسترسی‌ها', $super],
             ['admin.update', 'بروزرسانی پروژه', $can('updates')],
@@ -151,6 +154,93 @@ if (! function_exists('mask_phone')) {
         return strlen($phone) >= 7
             ? substr($phone, 0, 4) . '***' . substr($phone, -4)
             : '***';
+    }
+}
+
+if (! function_exists('media_url')) {
+    /**
+     * آدرس قابل نمایش برای تصویر.
+     * مقادیر مجاز: URL کامل، مسیر نسبی مثل /uploads/doctors/x.jpg، یا خالی.
+     */
+    function media_url(?string $path, string $fallback = '/images/placeholder.svg'): string
+    {
+        $path = trim((string) $path);
+
+        if ($path === '') {
+            return asset(ltrim($fallback, '/'));
+        }
+
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://') || str_starts_with($path, '//')) {
+            return $path;
+        }
+
+        return asset(ltrim($path, '/'));
+    }
+}
+
+if (! function_exists('store_uploaded_image')) {
+    /**
+     * ذخیرهٔ عکس آپلودی در public/uploads/{folder} و برگرداندن مسیر آن.
+     *
+     * آپلود داخل public نگه داشته می‌شود (نه storage) تا روی هاست ویندوزی
+     * نیاز به `php artisan storage:link` و ساخت junction نباشد.
+     */
+    function store_uploaded_image(?\Illuminate\Http\UploadedFile $file, string $folder = 'misc'): ?string
+    {
+        if (! $file || ! $file->isValid()) {
+            return null;
+        }
+
+        $allowed = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+        $extension = strtolower($file->getClientOriginalExtension() ?: (string) $file->extension());
+
+        if (! in_array($extension, $allowed, true)) {
+            $extension = 'jpg';
+        }
+
+        $folder = trim(preg_replace('/[^a-z0-9_-]/i', '', $folder) ?: 'misc', '/');
+        $directory = public_path('uploads/' . $folder);
+
+        if (! is_dir($directory)) {
+            @mkdir($directory, 0755, true);
+        }
+
+        $name = date('Ymd-His') . '-' . bin2hex(random_bytes(4)) . '.' . $extension;
+        $file->move($directory, $name);
+
+        return '/uploads/' . $folder . '/' . $name;
+    }
+}
+
+if (! function_exists('delete_uploaded_image')) {
+    /** حذف فایل آپلودی از public/uploads (فقط مسیرهای داخلی) */
+    function delete_uploaded_image(?string $url): void
+    {
+        $url = trim((string) $url);
+
+        if (! str_starts_with($url, '/uploads/')) {
+            return;
+        }
+
+        $path = public_path(ltrim($url, '/'));
+
+        if (is_file($path)) {
+            @unlink($path);
+        }
+    }
+}
+
+if (! function_exists('persian_slug')) {
+    /** ساخت slug یکتا از عنوان فارسی/انگلیسی */
+    function persian_slug(string $title, string $prefix = 'item'): string
+    {
+        $slug = \Illuminate\Support\Str::slug($title);
+
+        if ($slug === '' || $slug === null) {
+            $slug = $prefix . '-' . \Illuminate\Support\Str::random(8);
+        }
+
+        return \Illuminate\Support\Str::limit($slug, 120, '');
     }
 }
 

@@ -34,7 +34,7 @@
             @forelse($appointments as $appointment)
                 <div class="mb-3 rounded-2xl border p-3.5 {{ $appointment->status === 'cancelled' ? 'border-[#ebeeee] bg-[#f8f9f9] opacity-70' : 'border-[#e1ecea]' }}">
                     <div class="flex items-center gap-3">
-                        <img src="{{ $appointment->doctor?->image_url }}" alt="" class="size-16 rounded-2xl bg-[#e9f4f1] object-cover object-top">
+                        <img src="{{ media_url($appointment->doctor?->image_url) }}" alt="" class="size-16 rounded-2xl bg-[#e9f4f1] object-cover object-top">
                         <div class="min-w-0 flex-1">
                             <a href="{{ route('doctors.show', $appointment->doctor) }}" class="text-sm font-black hover:text-brand">{{ $appointment->doctor?->full_name ?? '—' }}</a>
                             <p class="mt-1 text-[10px] text-[#718784]">{{ $appointment->doctor?->title }}</p>

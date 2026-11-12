@@ -15,8 +15,8 @@
                         <span dir="ltr" class="block text-[10px] text-[#7b918e]">{{ $item->phone }}</span>
                     </div>
                     <span class="rounded-full px-2 py-1 text-[9px] font-bold {{ $isSuper ? 'bg-amber-50 text-amber-700' : 'bg-[#e9f8f4] text-brand' }}">{{ $isSuper ? 'مدیر ارشد' : 'مدیر' }}</span>
-                    @if(! $isSuper)
-                        <form action="{{ route('admin.admins.destroy', $item) }}" method="POST" onsubmit="return confirm('دسترسی مدیریت این شخص حذف شود؟')">
+                    @if($item->id !== auth()->id())
+                        <form action="{{ route('admin.admins.destroy', $item) }}" method="POST" onsubmit="return confirm('دسترسی مدیریتی این شماره حذف شود؟')">
                             @csrf @method('DELETE')
                             <button class="grid size-8 place-items-center rounded-lg text-red-400 hover:bg-red-50 hover:text-red-600">✕</button>
                         </form>

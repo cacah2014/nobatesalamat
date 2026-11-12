@@ -87,7 +87,7 @@
             <a href="{{ route('doctors.index') }}" class="transition hover:text-brand">پزشکان</a>
             <a href="{{ route('home') }}#specialties" class="transition hover:text-brand">تخصص‌ها</a>
             <a href="{{ route('doctors.index', ['visit' => 'online']) }}" class="transition hover:text-brand">مشاوره آنلاین</a>
-            <a href="{{ route('home') }}#health-mag" class="transition hover:text-brand">مجله سلامت</a>
+            <a href="{{ route('articles.index') }}" class="transition hover:text-brand">مجله سلامت</a>
         </nav>
         <div class="flex items-center gap-2.5">
             @auth

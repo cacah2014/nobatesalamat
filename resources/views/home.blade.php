@@ -2,14 +2,24 @@
 
 @php
     $s = fn(string $key) => \App\Models\SiteSetting::get($key);
-    $faqs = [
-        ['چطور از نوبت سلامت نوبت آنلاین بگیرم؟', 'پزشک یا تخصص موردنظر را جست‌وجو کنید، زمان آزاد را انتخاب و با شماره موبایل وارد شوید؛ نوبت شما در چند دقیقه با کد رهگیری قطعی می‌شود.'],
-        ['آیا برای ورود رمز عبور لازم است؟', 'خیر؛ ورود فقط با شماره موبایل و کد تأیید پیامکی انجام می‌شود.'],
-        ['امکان لغو نوبت وجود دارد؟', 'بله؛ از بخش «نوبت‌های من» در پنل کاربری می‌توانید نوبت را لغو کنید.'],
-        ['مشاوره آنلاین چگونه برگزار می‌شود؟', 'پزشکانی که نشان «مشاوره آنلاین» دارند پاسخ‌گوی غیرحضوری هستند؛ جزئیات پس از ثبت نوبت ارسال می‌شود.'],
-        ['هزینه ویزیت چگونه مشخص است؟', 'مبلغ دقیق روی پروفایل هر پزشک و پیش از ثبت نهایی نمایش داده می‌شود.'],
-        ['اطلاعات پزشکان چگونه تأیید می‌شود؟', 'مدارک و شماره نظام پزشکی پیش از فعال‌شدن پروفایل بررسی می‌شود و نظرات فقط از مراجعان تأییدشده است.'],
-    ];
+
+    // سؤالات متداول از دیتابیس (قابل ویرایش در پنل)؛ اگر خالی بود، متن پیش‌فرض
+    $faqs = \App\Models\Faq::activeList()->map(fn ($faq) => [$faq->question, $faq->answer])->all();
+
+    if ($faqs === []) {
+        $faqs = [
+            ['چطور از نوبت سلامت نوبت آنلاین بگیرم؟', 'پزشک یا تخصص موردنظر را جست‌وجو کنید، زمان آزاد را انتخاب و با شماره موبایل وارد شوید؛ نوبت شما در چند دقیقه با کد رهگیری قطعی می‌شود.'],
+            ['آیا برای ورود رمز عبور لازم است؟', 'خیر؛ ورود فقط با شماره موبایل و کد تأیید پیامکی انجام می‌شود.'],
+            ['امکان لغو نوبت وجود دارد؟', 'بله؛ از بخش «نوبت‌های من» در پنل کاربری می‌توانید نوبت را لغو کنید.'],
+            ['مشاوره آنلاین چگونه برگزار می‌شود؟', 'پزشکانی که نشان «مشاوره آنلاین» دارند پاسخ‌گوی غیرحضوری هستند؛ جزئیات پس از ثبت نوبت ارسال می‌شود.'],
+            ['هزینه ویزیت چگونه مشخص است؟', 'مبلغ دقیق روی پروفایل هر پزشک و پیش از ثبت نهایی نمایش داده می‌شود.'],
+            ['اطلاعات پزشکان چگونه تأیید می‌شود؟', 'مدارک و شماره نظام پزشکی پیش از فعال‌شدن پروفایل بررسی می‌شود و نظرات فقط از مراجعان تأییدشده است.'],
+        ];
+    }
+
+    // تصویر هیرو از پنل قابل تغییر است
+    $heroImage = $s('hero_image') ?: 'https://images.pexels.com/photos/6749773/pexels-photo-6749773.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1000&w=760';
+    $supportTel = preg_replace('/[^0-9+]/', '', en_digits($s('support_phone', '02191099090')));
 @endphp
 
 @section('content')
@@ -49,7 +59,7 @@
 
         <div class="relative hidden min-h-[480px] lg:block">
             <div class="float-anim absolute left-8 top-4 h-[420px] w-[330px] overflow-hidden rounded-[44px_44px_110px_44px] border-[7px] border-white shadow-2xl">
-                <img src="https://images.pexels.com/photos/6749773/pexels-photo-6749773.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1000&w=760" alt="پزشک نوبت سلامت" class="h-full w-full object-cover object-top">
+                <img src="{{ media_url($heroImage) }}" alt="پزشک نوبت سلامت" class="h-full w-full object-cover object-top">
             </div>
             <div class="absolute right-2 top-20 rounded-2xl bg-white/95 p-3.5 shadow-xl">
                 <small class="block text-[9px] text-[#7c9390]">نوبت شما قطعی شد</small><b class="text-xs">امروز، ساعت ۱۸:۳۰</b>
@@ -107,6 +117,27 @@
     </div>
 </section>
 
+{{-- مجله سلامت --}}
+@if($articles->isNotEmpty())
+    <section class="mx-auto w-full max-w-[1180px] px-4 pb-4 pt-20" id="health-mag">
+        <div class="mb-8 flex items-end justify-between">
+            <div><span class="text-xs font-black text-coral">مجله سلامت</span><h2 class="mt-2 text-3xl font-black">تازه‌ترین مطالب</h2></div>
+            <a href="{{ route('articles.index') }}" class="text-xs font-black text-brand">همهٔ مقالات ←</a>
+        </div>
+        <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            @foreach($articles as $article)
+                <a href="{{ route('articles.show', $article) }}" class="group overflow-hidden rounded-[22px] border border-[#e0ebe9] bg-white transition hover:-translate-y-1 hover:shadow-xl">
+                    <img src="{{ media_url($article->image_url) }}" alt="{{ $article->title }}" loading="lazy" class="h-40 w-full bg-[#eaf2f0] object-cover">
+                    <div class="p-4">
+                        <b class="block text-sm leading-6 transition group-hover:text-brand">{{ $article->title }}</b>
+                        <p class="mt-1 line-clamp-2 text-[11px] leading-5 text-[#68807e]">{{ $article->excerpt }}</p>
+                    </div>
+                </a>
+            @endforeach
+        </div>
+    </section>
+@endif
+
 {{-- FAQ --}}
 <section class="mx-auto w-full max-w-[1180px] px-4 pb-4 pt-20">
     <div class="grid items-start gap-10 lg:grid-cols-[.85fr_1.15fr]">
@@ -114,7 +145,7 @@
             <span class="text-xs font-black text-coral">پاسخ سریع به شما</span>
             <h2 class="mt-2 text-3xl font-black leading-snug">سؤالات متداول کاربران</h2>
             <p class="mt-3 max-w-md text-sm leading-7 text-[#718784]">هر آنچه پیش از اولین نوبت باید بدانید.</p>
-            <a href="tel:02191099090" class="btn-primary mt-6 text-xs">سؤال بیشتری دارید؟ تماس بگیرید</a>
+            <a href="tel:{{ $supportTel }}" class="btn-primary mt-6 text-xs">سؤال بیشتری دارید؟ تماس بگیرید</a>
         </div>
         <div class="space-y-3">
             @foreach($faqs as $i => [$question, $answer])

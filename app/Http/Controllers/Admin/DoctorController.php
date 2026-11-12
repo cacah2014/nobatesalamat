@@ -22,19 +22,61 @@ class DoctorController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        Doctor::create($this->validateDoctor($request) + [
-            'slug' => 'doctor-' . Str::random(8) . '-' . time(),
-            'is_active' => true,
-        ]);
+        $data = $this->validateDoctor($request);
+        $data['image_url'] = $this->resolveImage($request, '');
+        $data['slug'] = 'doctor-' . Str::random(8) . '-' . time();
+        $data['is_active'] = true;
+
+        Doctor::create($data);
 
         return back()->with('success', 'پزشک جدید اضافه شد.');
     }
 
     public function update(Request $request, Doctor $doctor): RedirectResponse
     {
-        $doctor->update($this->validateDoctor($request));
+        $data = $this->validateDoctor($request);
+        $data['image_url'] = $this->resolveImage($request, (string) $doctor->image_url);
+
+        $doctor->update($data);
 
         return back()->with('success', 'اطلاعات پزشک به‌روز شد.');
+    }
+
+    /** حذف کامل پزشک (اگر نوبتی برایش ثبت نشده باشد) */
+    public function forceDestroy(Doctor $doctor): RedirectResponse
+    {
+        if ($doctor->appointments()->exists()) {
+            return back()->with('success', 'این پزشک سابقهٔ نوبت دارد و حذف نمی‌شود؛ فقط غیرفعال شد.');
+        }
+
+        delete_uploaded_image($doctor->image_url);
+        $doctor->delete();
+
+        return back()->with('success', 'پزشک برای همیشه حذف شد.');
+    }
+
+    /**
+     * تعیین تصویر پزشک: فایل آپلودی > درخواست حذف > آدرس دستی > تصویر فعلی.
+     */
+    private function resolveImage(Request $request, string $current): string
+    {
+        if ($uploaded = store_uploaded_image($request->file('image'), 'doctors')) {
+            delete_uploaded_image($current);
+
+            return $uploaded;
+        }
+
+        if ($request->boolean('remove_image')) {
+            delete_uploaded_image($current);
+
+            return '';
+        }
+
+        if ($request->filled('image_url')) {
+            return (string) $request->input('image_url');
+        }
+
+        return $current;
     }
 
     /** غیرفعال‌سازی به‌جای حذف فیزیکی برای حفظ سوابق */
@@ -47,7 +89,7 @@ class DoctorController extends Controller
 
     private function validateDoctor(Request $request): array
     {
-        return $request->validate([
+        $data = $request->validate([
             'full_name' => ['required', 'string', 'min:3', 'max:120'],
             'specialty_id' => ['required', 'exists:specialties,id'],
             'title' => ['required', 'string', 'min:3', 'max:160'],
@@ -56,10 +98,24 @@ class DoctorController extends Controller
             'visit_price' => ['required', 'integer', 'min:0'],
             'experience_years' => ['required', 'integer', 'min:0', 'max:80'],
             'medical_code' => ['nullable', 'string', 'max:30'],
-            'image_url' => ['required', 'url', 'max:2000'],
+            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp,gif', 'max:5120'],
+            'image_url' => ['nullable', 'string', 'max:2000'],
+            'remove_image' => ['nullable', 'boolean'],
             'about' => ['nullable', 'string', 'max:3000'],
             'next_available' => ['nullable', 'string', 'max:80'],
             'is_online' => ['boolean'],
-        ]) + ['address' => '', 'medical_code' => '', 'about' => '', 'next_available' => 'امروز', 'is_online' => false];
+        ]);
+
+        // فیلدهای مخصوص آپلود نباید در مدل ذخیره شوند
+        unset($data['image'], $data['remove_image']);
+
+        return $data + [
+            'image_url' => (string) ($data['image_url'] ?? ''),
+            'address' => (string) ($data['address'] ?? ''),
+            'medical_code' => (string) ($data['medical_code'] ?? ''),
+            'about' => (string) ($data['about'] ?? ''),
+            'next_available' => (string) ($data['next_available'] ?? 'امروز'),
+            'is_online' => $request->boolean('is_online'),
+        ];
     }
 }

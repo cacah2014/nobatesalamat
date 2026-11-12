@@ -64,6 +64,15 @@
             </div>
         </header>
 
+        {{-- ناوبری موبایل (نوار کنار در موبایل پنهان است) --}}
+        <nav class="mb-5 flex gap-2 overflow-x-auto pb-1 lg:hidden">
+            @foreach(admin_menu($admin) as [$route, $label, $allowed])
+                @if($allowed)
+                    <a href="{{ route($route) }}" class="shrink-0 rounded-xl border px-3 py-2 text-[10px] font-bold transition {{ request()->routeIs($route . '*') ? 'border-brand bg-brand text-white' : 'border-[#dce9e7] bg-white text-[#526f6c]' }}">{{ $label }}</a>
+                @endif
+            @endforeach
+        </nav>
+
         @if(session('success'))
             <div class="mb-5 rounded-xl bg-emerald-50 px-4 py-3 text-xs font-bold text-emerald-700">{{ session('success') }}</div>
         @endif

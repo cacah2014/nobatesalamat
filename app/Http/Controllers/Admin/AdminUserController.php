@@ -75,14 +75,25 @@ class AdminUserController extends Controller
         return back()->with('success', "دسترسی‌های {$user->full_name} ذخیره شد.");
     }
 
-    /** حذف نقش مدیر (حساب کاربری باقی می‌ماند) */
+    /**
+     * حذف نقش مدیر (حساب کاربری باقی می‌ماند).
+     *
+     * استثناها: حساب خود مدیر، و آخرین مدیر ارشدِ باقی‌مانده. مدیران ارشد دیگر
+     * (مثل شمارهٔ نمونهٔ نصب 09120000000) قابل حذف‌اند.
+     */
     public function destroy(Request $request, User $user): RedirectResponse
     {
-        abort_if($user->isSuperAdmin() || $user->id === $request->user()->id, 422, 'امکان حذف این مدیر وجود ندارد.');
-        abort_unless($user->role === User::ROLE_ADMIN, 404);
+        abort_if($user->id === $request->user()->id, 422, 'امکان حذف دسترسی حساب خودتان وجود ندارد.');
+
+        if ($user->isSuperAdmin()) {
+            $superAdmins = User::where('role', User::ROLE_SUPER)->count();
+            abort_if($superAdmins <= 1, 422, 'این تنها مدیر ارشد سایت است و حذف‌شدنی نیست.');
+        }
+
+        abort_unless($user->isAdmin(), 404);
 
         $user->update(['role' => User::ROLE_USER, 'permissions' => []]);
 
-        return back()->with('success', 'دسترسی مدیر حذف شد.');
+        return back()->with('success', 'دسترسی مدیریتی ' . fa_digits($user->phone) . ' حذف شد.');
     }
 }

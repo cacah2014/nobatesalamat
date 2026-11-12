@@ -1,12 +1,16 @@
 <?php
 
 use App\Http\Controllers\Admin\AdminUserController;
+use App\Http\Controllers\Admin\ArticleController as AdminArticleController;
+use App\Http\Controllers\Admin\FaqController as AdminFaqController;
+use App\Http\Controllers\Admin\SpecialtyController as AdminSpecialtyController;
 use App\Http\Controllers\Admin\AppointmentController as AdminAppointmentController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\DoctorController as AdminDoctorController;
 use App\Http\Controllers\Admin\SiteSettingController;
 use App\Http\Controllers\Admin\UpdateController;
 use App\Http\Controllers\AppointmentController;
+use App\Http\Controllers\ArticleController;
 use App\Http\Controllers\DeployController;
 use App\Http\Controllers\Auth\PhoneAuthController;
 use App\Http\Controllers\DoctorController;
@@ -20,6 +24,10 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/doctors', [DoctorController::class, 'index'])->name('doctors.index');
 Route::get('/doctors/{doctor}', [DoctorController::class, 'show'])->name('doctors.show');
+
+// ---------- مقالات ----------
+Route::get('/articles', [ArticleController::class, 'index'])->name('articles.index');
+Route::get('/articles/{article}', [ArticleController::class, 'show'])->name('articles.show');
 
 // ---------- وضعیت سرویس (بررسی از راه دور) ----------
 Route::get('/health', HealthController::class)->name('health');
@@ -54,6 +62,20 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::middleware('permission:content')->group(function () {
         Route::get('/content', [SiteSettingController::class, 'index'])->name('content');
         Route::patch('/content', [SiteSettingController::class, 'update'])->name('content.update');
+        Route::post('/content', [SiteSettingController::class, 'store'])->name('content.store');
+        Route::delete('/content/{key}', [SiteSettingController::class, 'destroy'])->name('content.destroy');
+
+        // مقالات
+        Route::get('/articles', [AdminArticleController::class, 'index'])->name('articles');
+        Route::post('/articles', [AdminArticleController::class, 'store'])->name('articles.store');
+        Route::patch('/articles/{article}', [AdminArticleController::class, 'update'])->name('articles.update');
+        Route::delete('/articles/{article}', [AdminArticleController::class, 'destroy'])->name('articles.destroy');
+
+        // سؤالات متداول
+        Route::get('/faqs', [AdminFaqController::class, 'index'])->name('faqs');
+        Route::post('/faqs', [AdminFaqController::class, 'store'])->name('faqs.store');
+        Route::patch('/faqs/{faq}', [AdminFaqController::class, 'update'])->name('faqs.update');
+        Route::delete('/faqs/{faq}', [AdminFaqController::class, 'destroy'])->name('faqs.destroy');
     });
 
     // پزشکان ← دسترسی doctors
@@ -62,6 +84,13 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
         Route::post('/doctors', [AdminDoctorController::class, 'store'])->name('doctors.store');
         Route::patch('/doctors/{doctor}', [AdminDoctorController::class, 'update'])->name('doctors.update');
         Route::delete('/doctors/{doctor}', [AdminDoctorController::class, 'destroy'])->name('doctors.destroy');
+        Route::delete('/doctors/{doctor}/force', [AdminDoctorController::class, 'forceDestroy'])->name('doctors.force-destroy');
+
+        // حوزه‌های کاری (تخصص‌ها)
+        Route::get('/specialties', [AdminSpecialtyController::class, 'index'])->name('specialties');
+        Route::post('/specialties', [AdminSpecialtyController::class, 'store'])->name('specialties.store');
+        Route::patch('/specialties/{specialty}', [AdminSpecialtyController::class, 'update'])->name('specialties.update');
+        Route::delete('/specialties/{specialty}', [AdminSpecialtyController::class, 'destroy'])->name('specialties.destroy');
     });
 
     // نوبت‌ها ← دسترسی appointments

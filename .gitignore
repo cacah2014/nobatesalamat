@@ -23,3 +23,7 @@ yarn-error.log
 /.zed
 .DS_Store
 /database/*.sqlite
+
+# عکس‌های آپلودی کاربر (روی هر سرور جدا ذخیره می‌شوند)
+/public/uploads/*
+!/public/uploads/.gitkeep
