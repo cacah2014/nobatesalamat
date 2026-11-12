@@ -13,7 +13,8 @@ class AdminAccess
     {
         $user = $request->user();
 
-        if (! $user || ! $user->isAdmin() || ! $user->isActive()) {
+        // شمارهٔ نمونهٔ نصب (09120000000) هرگز مدیر محسوب نمی‌شود
+        if (! $user || ! $user->isAdmin() || ! $user->isActive() || is_placeholder_phone($user->phone)) {
             if ($request->expectsJson()) {
                 return response()->json(['error' => 'دسترسی غیرمجاز'], 403);
             }

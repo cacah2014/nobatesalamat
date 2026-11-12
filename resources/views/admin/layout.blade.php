@@ -27,31 +27,22 @@
             <span><b class="block text-base">نوبت سلامت</b><small class="text-[9px] text-[#9fbfbc]">مدیریت یکپارچه سایت</small></span>
         </a>
         <div class="mt-8 flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[.06] p-3">
-            <span class="grid size-9 shrink-0 place-items-center rounded-xl font-black {{ $admin->isSuperAdmin() ? 'bg-gradient-to-br from-amber-400 to-orange-500' : 'bg-gradient-to-br from-teal-400 to-emerald-500' }}">{{ mb_substr($admin->full_name, 0, 1) }}</span>
-            <div class="min-w-0"><b class="block truncate text-xs">{{ $admin->full_name }}</b><small class="text-[9px] text-[#9fbfbc]">{{ $admin->isSuperAdmin() ? 'مدیر ارشد · دسترسی کامل' : 'مدیر سایت' }}</small></div>
+            <span class="grid size-9 shrink-0 place-items-center rounded-xl font-black {{ $admin?->isSuperAdmin() ? 'bg-gradient-to-br from-amber-400 to-orange-500' : 'bg-gradient-to-br from-teal-400 to-emerald-500' }}">{{ mb_substr((string) ($admin?->full_name ?: 'م'), 0, 1) }}</span>
+            <div class="min-w-0"><b class="block truncate text-xs">{{ $admin?->full_name ?: 'مدیر سایت' }}</b><small class="text-[9px] text-[#9fbfbc]">{{ $admin?->isSuperAdmin() ? 'مدیر ارشد · دسترسی کامل' : 'مدیر سایت' }}</small></div>
         </div>
 
         <nav class="mt-6 space-y-1 text-xs font-bold">
-            @php
-                $menu = [
-                    ['admin.dashboard', 'نمای کلی', true],
-                    ['admin.content', 'محتوای سایت', $admin->hasPermission('content')],
-                    ['admin.doctors', 'مدیریت پزشکان', $admin->hasPermission('doctors')],
-                    ['admin.appointments', 'مدیریت نوبت‌ها', $admin->hasPermission('appointments')],
-                    ['admin.admins', 'مدیران و دسترسی‌ها', $admin->isSuperAdmin()],
-                    ['admin.update', 'بروزرسانی پروژه', $admin->hasPermission('updates')],
-                ];
-            @endphp
-            @foreach($menu as [$route, $label, $allowed])
+            {{-- منو در admin_menu() ساخته می‌شود؛ قالب فقط یک حلقهٔ ساده دارد --}}
+            @foreach(admin_menu($admin) as [$route, $label, $allowed])
                 @if($allowed)
                     <a href="{{ route($route) }}" class="block rounded-xl px-3 py-3 transition {{ request()->routeIs($route . '*') ? 'bg-white text-[#0d3837] shadow-lg' : 'text-[#a7c4c1] hover:bg-white/[.06] hover:text-white' }}">{{ $label }}</a>
                 @endif
             @endforeach
         </nav>
 
-        @if(! $admin->isSuperAdmin())
+        @if(! $admin?->isSuperAdmin())
             <p class="mt-4 rounded-xl border border-dashed border-white/15 p-3 text-[9px] leading-5 text-[#8fb1ae]">
-                @php($count = count(array_filter($admin->permissions ?? [])))
+                @php($count = count(array_filter((array) ($admin?->permissions ?? []))))
                 {{ $count ? 'دسترسی شما به ' . fa_digits($count) . ' بخش فعال است.' : 'مدیر ارشد هنوز دسترسی بخشی را برای شما تعیین نکرده است.' }}
             </p>
         @endif
@@ -65,7 +56,12 @@
     <section class="min-w-0 p-4 sm:p-7 lg:p-9">
         <header class="mb-7 flex items-center justify-between gap-3">
             <div><p class="text-[10px] font-bold text-brand">پنل مدیریت</p><h1 class="mt-1 text-2xl font-black">@yield('title')</h1></div>
-            <span class="hidden rounded-xl border border-[#dce9e7] bg-white px-3 py-2 text-[10px] text-[#607976] sm:block">{{ fa_date(now()) }}</span>
+            <div class="flex items-center gap-2">
+                <span class="hidden rounded-xl border border-[#dce9e7] bg-white px-3 py-2 text-[10px] text-[#607976] sm:block">{{ fa_date(now()) }}</span>
+                {{-- در موبایل نوار کنار پنهان است، پس خروج/سایت باید اینجا در دسترس باشد --}}
+                <a href="{{ route('home') }}" class="rounded-xl border border-[#dce9e7] bg-white px-3 py-2 text-[10px] font-bold text-[#607976] lg:hidden">سایت</a>
+                <form action="{{ route('logout') }}" method="POST" class="lg:hidden">@csrf<button class="rounded-xl bg-[#ffe9e4] px-3 py-2 text-[10px] font-bold text-[#b4442c]">خروج</button></form>
+            </div>
         </header>
 
         @if(session('success'))

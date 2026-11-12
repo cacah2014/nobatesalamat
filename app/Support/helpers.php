@@ -93,6 +93,55 @@ if (! function_exists('is_admin_phone')) {
     }
 }
 
+if (! function_exists('admin_menu')) {
+    /**
+     * آیتم‌های منوی پنل مدیریت بر اساس دسترسی کاربر جاری.
+     *
+     * محاسبهٔ منو در PHP انجام می‌شود (نه در یک بلوک @php داخل قالب) تا
+     * قالب فقط یک حلقهٔ ساده داشته باشد و خطای «Undefined variable $menu»
+     * در هیچ حالتی رخ ندهد.
+     *
+     * @return array<int, array{0: string, 1: string, 2: bool}>
+     */
+    function admin_menu(?object $admin = null): array
+    {
+        $admin ??= auth()->user();
+
+        $super = $admin !== null && method_exists($admin, 'isSuperAdmin') && $admin->isSuperAdmin();
+
+        $can = static fn (string $permission): bool => $admin !== null
+            && method_exists($admin, 'hasPermission')
+            && $admin->hasPermission($permission);
+
+        return [
+            ['admin.dashboard', 'نمای کلی', true],
+            ['admin.content', 'محتوای سایت', $can('content')],
+            ['admin.doctors', 'مدیریت پزشکان', $can('doctors')],
+            ['admin.appointments', 'مدیریت نوبت‌ها', $can('appointments')],
+            ['admin.admins', 'مدیران و دسترسی‌ها', $super],
+            ['admin.update', 'بروزرسانی پروژه', $can('updates')],
+        ];
+    }
+}
+
+if (! function_exists('is_placeholder_phone')) {
+    /**
+     * شماره‌های نمونهٔ نصب (مثل 09120000000) هرگز نباید دسترسی مدیریت داشته
+     * باشند؛ مگر اینکه صریحاً در ADMIN_PHONE/OWNER_PHONE تعیین شده باشند.
+     */
+    function is_placeholder_phone(?string $phone): bool
+    {
+        if ($phone === null || $phone === '') {
+            return false;
+        }
+
+        $placeholders = (array) config('services.nobat.placeholder_phones', ['09120000000']);
+
+        return in_array(normalize_phone($phone), array_map('normalize_phone', $placeholders), true)
+            && ! is_admin_phone($phone);
+    }
+}
+
 if (! function_exists('mask_phone')) {
     /** نمایش امن شماره در لاگ: 0936***8962 */
     function mask_phone(?string $phone): string

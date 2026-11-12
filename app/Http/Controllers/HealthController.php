@@ -24,7 +24,8 @@ class HealthController extends Controller
         $owner = null;
 
         if (Schema::hasTable('users')) {
-            $phone = admin_phones()[0] ?? null;
+            $ownerPhone = normalize_phone((string) config('services.nobat.owner_phone', ''));
+            $phone = is_admin_phone($ownerPhone) ? $ownerPhone : (admin_phones()[0] ?? null);
 
             if ($phone !== null) {
                 $row = DB::table('users')->where('phone', $phone)->first();
@@ -36,6 +37,18 @@ class HealthController extends Controller
                     'active' => $row ? ! in_array(strtolower((string) $row->status), ['blocked', 'inactive', 'disabled', 'suspended'], true) : null,
                 ];
             }
+
+            $admins = DB::table('users')
+                ->whereIn('role', [User::ROLE_ADMIN, User::ROLE_SUPER])
+                ->orderBy('id')
+                ->get(['phone', 'role', 'status'])
+                ->map(fn ($row) => [
+                    'phone' => mask_phone((string) $row->phone),
+                    'role' => $row->role,
+                    'active' => ! in_array(strtolower((string) $row->status), ['blocked', 'inactive', 'disabled', 'suspended'], true),
+                    'configured' => is_admin_phone((string) $row->phone),
+                ])
+                ->all();
 
             $counts['users'] = DB::table('users')->count();
             $counts['admins'] = DB::table('users')->whereIn('role', [User::ROLE_ADMIN, User::ROLE_SUPER])->count();
@@ -68,6 +81,7 @@ class HealthController extends Controller
             'commit' => $this->commit(),
             'admin_phone_config' => array_map('mask_phone', admin_phones()),
             'owner' => $owner,
+            'admins' => $admins ?? [],
             'counts' => $counts,
             'schema' => $schema,
             'last_error' => $this->lastError(),
