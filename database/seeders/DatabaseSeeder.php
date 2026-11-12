@@ -34,6 +34,12 @@ class DatabaseSeeder extends Seeder
                 SiteSetting::create(compact('key', 'value', 'label', 'group') + ['type' => 'text']);
             }
 
+            // کد نماد اعتماد الکترونیکی (ای‌نماد) — داخل <head> سایت چاپ می‌شود
+            SiteSetting::firstOrCreate(
+                ['key' => 'enamad_code'],
+                ['value' => '57649165', 'label' => 'کد ای‌نماد (enamad)', 'group' => 'general', 'type' => 'text']
+            );
+
             // کلید تصویری نمونه (از پنل قابل آپلود است)
             SiteSetting::firstOrCreate(
                 ['key' => 'hero_image'],
