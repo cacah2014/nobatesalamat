@@ -23,7 +23,7 @@ class AppCheckCommand extends Command
         'sessions', 'cache', 'cache_locks', 'jobs', 'failed_jobs',
     ];
 
-    private const USER_COLUMNS = ['phone', 'full_name', 'role', 'status', 'permissions'];
+    private const USER_COLUMNS = ['phone', 'full_name', 'role', 'status', 'permissions', 'remember_token'];
 
     public function handle(): int
     {

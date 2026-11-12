@@ -113,6 +113,18 @@ php artisan user:status 09120000000 active   # فعال‌سازی یک شمار
 php artisan user:status 09121234567 blocked  # مسدود کردن یک شماره
 ```
 
+## بعد از زدن کد، «Server error» می‌آید ولی با رفرش وارد شده‌ام
+
+این حالت یعنی ورود انجام شده و فقط پاسخ نهایی خطا داده است. علت رایج: نبودن ستون `remember_token` در جدول `users` (ورود با `remember: true` توکن را ذخیره می‌کند و SQL خطا می‌دهد، در حالی که نشست قبلاً ثبت شده).
+
+```bash
+php artisan migrate            # ستون remember_token اضافه می‌شود
+php artisan app:check          # بررسی ستون‌های users (remember_token هم چک می‌شود)
+tail -n 30 storage/logs/laravel.log | grep -i remember
+```
+
+از این نسخه، اگر ستون ساخته نشده باشد ورود بدون «مرا به خاطر بسپار» انجام می‌شود و دیگر ۵۰۰ نمی‌دهد.
+
 ## کد تأیید کار نمی‌کند / «تأیید کد انجام نشد»
 
 ```bash
