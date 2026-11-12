@@ -132,7 +132,16 @@ class PhoneAuthController extends Controller
             return response()->json(['error' => 'حساب شما غیرفعال است. برای پیگیری با پشتیبانی تماس بگیرید.'], 403);
         }
 
-        Auth::login($user, remember: true);
+        // «مرا به خاطر بسپار» به ستون remember_token نیاز دارد؛ اگر هنوز
+        // مایگریشن اجرا نشده باشد، ورود بدون آن انجام می‌شود تا کاربر
+        // به‌جای خطای ۵۰۰، عادی وارد شود.
+        try {
+            Auth::login($user, remember: true);
+        } catch (\Throwable $e) {
+            report($e);
+            Auth::login($user);
+        }
+
         $request->session()->regenerate();
 
         return response()->json([
