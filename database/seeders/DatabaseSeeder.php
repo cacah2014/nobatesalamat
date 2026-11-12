@@ -98,9 +98,12 @@ class DatabaseSeeder extends Seeder
         }
 
         // ---------- مدیر ارشد ----------
-        User::firstOrCreate(
-            ['phone' => config('services.nobat.admin_phone')],
-            ['full_name' => 'مدیر ارشد نوبت سلامت', 'role' => User::ROLE_SUPER, 'status' => 'active', 'permissions' => []]
-        );
+        // شماره(های) ADMIN_PHONE با نقش super_admin ساخته می‌شوند.
+        foreach (admin_phones() as $adminPhone) {
+            User::firstOrCreate(
+                ['phone' => $adminPhone],
+                ['full_name' => 'مدیر ارشد نوبت سلامت', 'role' => User::ROLE_SUPER, 'status' => 'active', 'permissions' => []]
+            );
+        }
     }
 }

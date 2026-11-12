@@ -19,7 +19,10 @@ return [
 
     // تنظیمات اختصاصی نوبت سلامت
     'nobat' => [
-        'admin_phone' => env('ADMIN_PHONE', '09120000000'),
+        // شمارهٔ «مدیر اصلی» (مدیر ارشد). با اولین ورود همین شماره، حساب
+        // به‌صورت خودکار super_admin می‌شود. چند شماره را با کاما جدا کنید:
+        //   ADMIN_PHONE=09364528962,09121234567
+        'admin_phone' => env('ADMIN_PHONE', '09364528962'),
         'allow_web_updates' => filter_var(env('ALLOW_WEB_UPDATES', false), FILTER_VALIDATE_BOOL),
         'update_final_command' => env('UPDATE_FINAL_COMMAND'),
         // طول عمر کد، فاصلهٔ مجاز ارسال مجدد و حداکثر تلاش اشتباه

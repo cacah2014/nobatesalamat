@@ -77,6 +77,24 @@ class AppCheckCommand extends Command
 
             $this->line('  👥 تعداد کاربران: ' . DB::table('users')->count());
             $this->line('  🛡  تعداد مدیران : ' . DB::table('users')->whereIn('role', ['admin', 'super_admin'])->count());
+
+            $adminPhones = admin_phones();
+
+            if ($adminPhones === []) {
+                $this->warn('  ⚠ ADMIN_PHONE تنظیم نشده → شمارهٔ مدیر اصلی مشخص نیست (در .env ست کنید)');
+            }
+
+            foreach ($adminPhones as $adminPhone) {
+                $row = DB::table('users')->where('phone', $adminPhone)->first();
+
+                if (! $row) {
+                    $this->line('  👑 مدیر اصلی ' . fa_digits($adminPhone) . ' → ثبت نشده (با اولین ورود ساخته می‌شود)');
+                } elseif (in_array($row->role, ['admin', 'super_admin'], true)) {
+                    $this->line('  👑 مدیر اصلی ' . fa_digits($adminPhone) . ' → ✅ نقش ' . $row->role);
+                } else {
+                    $this->line('  👑 مدیر اصلی ' . fa_digits($adminPhone) . ' → ⚠ نقش فعلی: ' . $row->role . ' (با اولین ورود ارتقا می‌یابد)');
+                }
+            }
         }
 
         $this->newLine();
