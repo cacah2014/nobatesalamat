@@ -42,7 +42,7 @@
         @foreach($logs as $log)
             <div class="flex items-center justify-between rounded-xl bg-[#f7faf9] p-3 text-[10px]">
                 <span>{{ fa_date($log->started_at) }} · {{ \App\Models\UpdateLog::STEP_LABELS[$log->current_step] ?? $log->current_step }}</span>
-                <span class="rounded-full px-2 py-1 font-bold {{ $log->status === 'success' ? 'bg-emerald-50 text-emerald-600' : ($log->status === 'failed' ? 'bg-red-50 text-red-500' : 'bg-amber-50 text-amber-600') }}">{{ ['success' => 'موفق', 'failed' => 'ناموفق', 'running' => 'در حال اجرا'][$log->status] }}</span>
+                <span class="rounded-full px-2 py-1 font-bold {{ $log->status === 'success' ? 'bg-emerald-50 text-emerald-600' : ($log->status === 'failed' ? 'bg-red-50 text-red-500' : 'bg-amber-50 text-amber-600') }}">{{ ['success' => 'موفق', 'failed' => 'ناموفق', 'running' => 'در حال اجرا'][$log->status] ?? $log->status }}</span>
             </div>
         @endforeach
     </div>

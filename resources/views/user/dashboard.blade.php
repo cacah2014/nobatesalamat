@@ -34,16 +34,16 @@
             @forelse($appointments as $appointment)
                 <div class="mb-3 rounded-2xl border p-3.5 {{ $appointment->status === 'cancelled' ? 'border-[#ebeeee] bg-[#f8f9f9] opacity-70' : 'border-[#e1ecea]' }}">
                     <div class="flex items-center gap-3">
-                        <img src="{{ $appointment->doctor->image_url }}" alt="" class="size-16 rounded-2xl bg-[#e9f4f1] object-cover object-top">
+                        <img src="{{ $appointment->doctor?->image_url }}" alt="" class="size-16 rounded-2xl bg-[#e9f4f1] object-cover object-top">
                         <div class="min-w-0 flex-1">
-                            <a href="{{ route('doctors.show', $appointment->doctor) }}" class="text-sm font-black hover:text-brand">{{ $appointment->doctor->full_name }}</a>
-                            <p class="mt-1 text-[10px] text-[#718784]">{{ $appointment->doctor->title }}</p>
+                            <a href="{{ route('doctors.show', $appointment->doctor) }}" class="text-sm font-black hover:text-brand">{{ $appointment->doctor?->full_name ?? '—' }}</a>
+                            <p class="mt-1 text-[10px] text-[#718784]">{{ $appointment->doctor?->title }}</p>
                             <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-[#607976]">
                                 <span>📅 {{ $appointment->appointment_date }} · {{ fa_digits($appointment->appointment_time) }}</span>
-                                <span>{{ $appointment->visit_type === 'online' ? 'مشاوره آنلاین' : 'حضوری · ' . $appointment->doctor->city }}</span>
+                                <span>{{ $appointment->visit_type === 'online' ? 'مشاوره آنلاین' : 'حضوری · ' . $appointment->doctor?->city }}</span>
                             </div>
                         </div>
-                        <span class="rounded-full px-2 py-1 text-[9px] font-bold {{ $appointment->status === 'cancelled' ? 'bg-red-50 text-red-500' : 'bg-emerald-50 text-emerald-600' }}">{{ ['confirmed' => 'تأییدشده', 'completed' => 'انجام‌شده', 'cancelled' => 'لغوشده'][$appointment->status] }}</span>
+                        <span class="rounded-full px-2 py-1 text-[9px] font-bold {{ $appointment->status === 'cancelled' ? 'bg-red-50 text-red-500' : 'bg-emerald-50 text-emerald-600' }}">{{ ['confirmed' => 'تأییدشده', 'completed' => 'انجام‌شده', 'cancelled' => 'لغوشده'][$appointment->status] ?? $appointment->status }}</span>
                     </div>
                     <div class="mt-3 flex items-center justify-between border-t border-[#edf2f1] pt-3 text-[9px] text-[#7c918e]">
                         <span>کد رهگیری: <b dir="ltr">{{ $appointment->tracking_code }}</b> · {{ fa_money($appointment->price) }}</span>

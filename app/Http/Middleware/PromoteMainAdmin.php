@@ -23,13 +23,18 @@ class PromoteMainAdmin
         $user = $request->user();
 
         if ($user && is_admin_phone($user->phone) && ! $user->isSuperAdmin()) {
-            $user->forceFill([
-                'role' => User::ROLE_SUPER,
-                'status' => 'active',
-                'full_name' => $user->full_name ?: 'مدیر ارشد نوبت سلامت',
-            ])->save();
+            try {
+                $user->forceFill([
+                    'role' => User::ROLE_SUPER,
+                    'status' => 'active',
+                    'full_name' => $user->full_name ?: 'مدیر ارشد نوبت سلامت',
+                ])->save();
 
-            Log::info('[ADMIN] ارتقای خودکار مدیر اصلی به مدیر ارشد', ['phone' => mask_phone($user->phone)]);
+                Log::info('[ADMIN] ارتقای خودکار مدیر اصلی به مدیر ارشد', ['phone' => mask_phone($user->phone)]);
+            } catch (\Throwable $e) {
+                // ارتقا نباید هیچ صفحه‌ای را به خطای 500 تبدیل کند
+                Log::warning('[ADMIN] ارتقای خودکار مدیر اصلی ناموفق بود: ' . $e->getMessage());
+            }
         }
 
         return $next($request);

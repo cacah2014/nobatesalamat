@@ -17,9 +17,9 @@
         <h2 class="mb-4 text-sm font-black">آخرین نوبت‌ها</h2>
         @forelse($recentAppointments as $appointment)
             <div class="flex items-center justify-between border-b border-[#f0f4f3] py-3 text-[10px] last:border-0">
-                <div><b class="block text-xs">{{ $appointment->patient_name }}</b><span dir="ltr" class="text-[#829592]">{{ $appointment->user->phone }}</span></div>
-                <div class="text-center">{{ $appointment->doctor->full_name }}<br><span class="text-[#829592]">{{ $appointment->appointment_date }} {{ fa_digits($appointment->appointment_time) }}</span></div>
-                <span class="rounded-full px-2 py-1 font-bold {{ $appointment->status === 'cancelled' ? 'bg-red-50 text-red-500' : 'bg-emerald-50 text-emerald-600' }}">{{ ['confirmed' => 'تأییدشده', 'completed' => 'انجام‌شده', 'cancelled' => 'لغوشده'][$appointment->status] }}</span>
+                <div><b class="block text-xs">{{ $appointment->patient_name }}</b><span dir="ltr" class="text-[#829592]">{{ $appointment->user?->phone ?? '—' }}</span></div>
+                <div class="text-center">{{ $appointment->doctor?->full_name ?? '—' }}<br><span class="text-[#829592]">{{ $appointment->appointment_date }} {{ fa_digits($appointment->appointment_time) }}</span></div>
+                <span class="rounded-full px-2 py-1 font-bold {{ $appointment->status === 'cancelled' ? 'bg-red-50 text-red-500' : 'bg-emerald-50 text-emerald-600' }}">{{ ['confirmed' => 'تأییدشده', 'completed' => 'انجام‌شده', 'cancelled' => 'لغوشده'][$appointment->status] ?? $appointment->status }}</span>
             </div>
         @empty
             <p class="py-10 text-center text-xs text-[#829592]">هنوز نوبتی ثبت نشده است.</p>

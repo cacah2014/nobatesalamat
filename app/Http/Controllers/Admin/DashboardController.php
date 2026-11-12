@@ -18,7 +18,7 @@ class DashboardController extends Controller
                 'users' => User::count(),
                 'doctors' => Doctor::where('is_active', true)->count(),
                 'appointments' => Appointment::count(),
-                'revenue' => Appointment::where('status', '!=', 'cancelled')->sum('price'),
+                'revenue' => (int) Appointment::where('status', '!=', 'cancelled')->sum('price'),
             ],
             'recentAppointments' => Appointment::with(['doctor', 'user'])->latest()->limit(5)->get(),
             'lastUpdate' => UpdateLog::latest('started_at')->first(),
