@@ -2,6 +2,9 @@
 <html lang="fa" dir="rtl">
 <head>
     <meta charset="UTF-8">
+    {{-- متاتگ نماد اعتماد الکترونیکی (ای‌نماد) — برای دکمهٔ «تایید متاتگ» در enamad.ir
+         الزامی است، باید عیناً به این شکل باشد و در نخستین بخش <head> قرار گیرد. --}}
+    <meta name="enamad" content="{{ enamad_code() }}" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'نوبت سلامت | نوبت‌دهی آنلاین پزشکان')</title>
@@ -15,12 +18,6 @@
     <meta property="og:url" content="{{ url()->current() }}">
     <meta property="og:image" content="@yield('og_image', asset('images/og-image.jpg'))">
     <meta name="theme-color" content="#0d9488">
-
-    {{-- متاتگ نماد اعتماد الکترونیکی (ای‌نماد) — برای دکمهٔ «تایید متاتگ» در enamad.ir
-         الزامی است و باید عیناً به این شکل در <head> صفحهٔ اصلی باشد.
-         کد از پنل → محتوای سایت (کلید enamad_code) خوانده می‌شود و در هر حال
-         به‌صورت عدد انگلیسی چاپ می‌گردد. --}}
-    <meta name="enamad" content="{{ enamad_code() }}" />
 
     @yield('head')
 
