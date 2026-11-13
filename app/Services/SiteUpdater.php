@@ -86,9 +86,49 @@ class SiteUpdater
         );
     }
 
+    /** باینری PHP که واقعاً روی سرور اجرا می‌شود (نتیجه در همان درخواست کش می‌شود) */
+    private static ?string $resolvedPhp = null;
+
+    /**
+     * پیدا کردن PHP CLI قابل اجرا.
+     *
+     * ترتیب: مقدار UPDATE_PHP_BINARY ← PHP_BINARY خود برنامه ← `php` روی PATH.
+     * این کار جلوی خطای «is not recognized as an internal or external command»
+     * را می‌گیرد؛ مثلاً وقتی `PHP_BINARY` به php-cgi اشاره می‌کند یا متغیر محیطی
+     * با کوتیشن اضافه تنظیم شده است.
+     */
     public function phpBinary(): string
     {
-        return (string) config('services.nobat.update.php_binary', PHP_BINARY);
+        if (self::$resolvedPhp !== null) {
+            return self::$resolvedPhp;
+        }
+
+        $configured = self::cleanBinary((string) config('services.nobat.update.php_binary', ''));
+
+        $candidates = array_values(array_unique(array_filter([
+            $configured,
+            self::cleanBinary((string) PHP_BINARY),
+            'php',
+            'php.exe',
+        ], fn (string $value) => $value !== '')));
+
+        foreach ($candidates as $candidate) {
+            try {
+                if (str_contains($this->runProcess([$candidate, '-v'], 60), 'PHP ')) {
+                    return self::$resolvedPhp = $candidate;
+                }
+            } catch (Throwable) {
+                continue;
+            }
+        }
+
+        return self::$resolvedPhp = $configured !== '' ? $configured : (string) PHP_BINARY;
+    }
+
+    /** حذف کوتیشن/فاصلهٔ اضافه از مسیر باینری‌های تنظیم‌شده در EnvKit */
+    private static function cleanBinary(string $value): string
+    {
+        return trim($value, " \t\n\r\0\x0B\"'");
     }
 
     public function composerBinary(): string
@@ -170,17 +210,22 @@ class SiteUpdater
         }
 
         try {
-            $phpVersion = trim($this->runProcess([$this->phpBinary(), '-v']));
+            $binary = $this->phpBinary();
+            $phpVersion = trim($this->runProcess([$binary, '-v'], 60));
             $checks[] = [
                 'label' => 'PHP CLI',
                 'ok' => str_contains($phpVersion, 'PHP '),
-                'detail' => $phpVersion === '' ? 'php در سرور اجرا نشد' : strtok($phpVersion, "\n"),
+                'detail' => $phpVersion === ''
+                    ? 'php در سرور اجرا نشد (' . $binary . ')'
+                    : strtok($phpVersion, "\n") . ' — ' . $binary,
             ];
         } catch (Throwable $e) {
             $checks[] = [
                 'label' => 'PHP CLI',
                 'ok' => false,
-                'detail' => 'اجرای ' . $this->phpBinary() . ' ممکن نشد (متغیر UPDATE_PHP_BINARY را تنظیم کنید): ' . $e->getMessage(),
+                'detail' => 'PHP CLI اجرا نشد. در EnvKit متغیر UPDATE_PHP_BINARY را روی مسیر کامل php.exe بگذارید '
+                    . '(مثال: C:\\ProgramData\\envkit\\services\\php\\8.5.12\\php.exe) — بدون کوتیشن. جزئیات: '
+                    . $e->getMessage(),
             ];
         }
 
@@ -365,9 +410,21 @@ class SiteUpdater
                     . 'git stash list / git stash show -p stash@{0} / git stash pop');
             }
 
-            $final = config('services.nobat.update.final_command');
+            $final = trim((string) config('services.nobat.update.final_command'));
 
-            $save('update', $final ? $this->runShell($final) : 'نسخهٔ جدید فعال شد.');
+            if ($final === '') {
+                $save('update', 'نسخهٔ جدید فعال شد.');
+            } else {
+                try {
+                    $save('update', $this->runShell($final));
+                } catch (Throwable $e) {
+                    // کد و دیتابیس آپدیت شده‌اند؛ فقط فرمان اختیاریِ محیطی خطا داده است
+                    $message = trim($e->getMessage()) ?: 'خطای نامشخص';
+
+                    $warnings[] = 'فرمان نهایی (UPDATE_FINAL_COMMAND) ناموفق بود: ' . $message;
+                    $save('update', '[هشدار] ' . $message . "\n\nنسخهٔ جدید با موفقیت فعال شد؛ فقط فرمان اختیاری محیطی اجرا نشد.");
+                }
+            }
 
             $log->update(['status' => 'success', 'current_step' => 'completed', 'finished_at' => now()]);
 
@@ -461,9 +518,9 @@ class SiteUpdater
         return $name;
     }
 
-    private function runProcess(array $command): string
+    private function runProcess(array $command, ?int $timeout = null): string
     {
-        $process = new Process($command, base_path(), null, null, $this->timeout());
+        $process = new Process($command, base_path(), null, null, $timeout ?? $this->timeout());
         $process->run();
 
         if (! $process->isSuccessful()) {
