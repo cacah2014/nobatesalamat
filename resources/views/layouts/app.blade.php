@@ -16,11 +16,11 @@
     <meta property="og:image" content="@yield('og_image', asset('images/og-image.jpg'))">
     <meta name="theme-color" content="#0d9488">
 
-    {{-- نماد اعتماد الکترونیکی (ای‌نماد) — کد از پنل → محتوای سایت قابل تغییر است --}}
-    @php($enamadCode = trim(\App\Models\SiteSetting::get('enamad_code', '57649165')))
-    @if($enamadCode !== '')
-        <meta name="enamad" content="{{ $enamadCode }}">
-    @endif
+    {{-- متاتگ نماد اعتماد الکترونیکی (ای‌نماد) — برای دکمهٔ «تایید متاتگ» در enamad.ir
+         الزامی است و باید عیناً به این شکل در <head> صفحهٔ اصلی باشد.
+         کد از پنل → محتوای سایت (کلید enamad_code) خوانده می‌شود و در هر حال
+         به‌صورت عدد انگلیسی چاپ می‌گردد. --}}
+    <meta name="enamad" content="{{ enamad_code() }}" />
 
     @yield('head')
 
