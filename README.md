@@ -131,6 +131,22 @@ error: Your local changes to the following files would be overwritten by merge
 - برگرداندن آن‌ها: `git stash pop`
 - غیرفعال‌کردن این رفتار: `UPDATE_AUTO_STASH=false`
 
+## خطای PHP CLI در صفحهٔ بروزرسانی (`is not recognized as an internal or external command`)
+
+این پیام یعنی مسیرِ `UPDATE_PHP_BINARY` روی سرور قابل اجرا نیست (مسیر اشتباه، کوتیشن اضافه، یا اشاره به `php-cgi`).
+
+از نسخهٔ فعلی، برنامه خودش PHP CLI را پیدا می‌کند: مقدار `UPDATE_PHP_BINARY` → `PHP_BINARY` → `php` روی PATH. اولین گزینه‌ای که `php -v` را درست جواب دهد برای همهٔ مراحل (composer، migrate، cache) استفاده می‌شود و مسیر واقعی در کارت «PHP CLI» نمایش داده می‌شود.
+
+اگر باز هم خطا دیدید، در EnvKit مقدار زیر را (بدون کوتیشن) تنظیم کنید:
+
+```
+UPDATE_PHP_BINARY=C:\ProgramData\envkit\services\php\8.5.12\php.exe
+```
+
+## فرمان نهایی اختیاری، دیگر آپدیت را «ناموفق» نمی‌کند
+
+`UPDATE_FINAL_COMMAND` (مثلاً `php artisan optimize:clear`) بعد از همهٔ مراحل اجرا می‌شود. از این پس اگر این فرمان خطا بدهد (تایپو، نبودن دستور…)، آپدیت **موفق** ثبت می‌شود و فقط یک **هشدار** در خروجی می‌آید؛ چون کد و دیتابیس از قبل به‌روز شده‌اند.
+
 ## گیرکردن به‌روزرسانی روی «local changes would be overwritten»
 
 اگر روی سرور فایلی (مثل `.gitignore`) تغییر کرده باشد یا اختلاف پایان خط ویندوز (CRLF) باشد، `git pull` با این خطا متوقف می‌شود:
