@@ -115,3 +115,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
 // ---------- به‌روزرسانی خودکار سایت (EnvKit / Cron / CI) ----------
 Route::get('/deploy/{token?}', [DeployController::class, 'status'])->middleware('throttle:30,1')->name('deploy.status');
 Route::post('/deploy/{token?}', [DeployController::class, 'deploy'])->middleware('throttle:10,1')->name('deploy.run');
+
+// ---------- فایل تأیید ای‌نماد (مرحلهٔ «بارگذاری فایل در سرور») ----------
+// ای‌نماد می‌خواهد فایل خالیِ 57649165.txt در ریشهٔ سایت باشد و از آدرس
+// https://nobatesalamat.ir/57649165.txt با کد ۲۰۰ در دسترس باشد.
+// فایل واقعی در public/57649165.txt قرار دارد؛ این مسیر برای اطمینانِ بیشتر
+// (اگر فایل جابه‌جا/حذف شود) همان پاسخ خالی را برمی‌گرداند.
+Route::get('/57649165.txt', fn () => response('', 200, ['Content-Type' => 'text/plain; charset=UTF-8']))
+    ->name('enamad.verify-file');

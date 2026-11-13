@@ -131,6 +131,14 @@ error: Your local changes to the following files would be overwritten by merge
 - برگرداندن آن‌ها: `git stash pop`
 - غیرفعال‌کردن این رفتار: `UPDATE_AUTO_STASH=false`
 
+### مرحلهٔ «بارگذاری فایل در سرور»
+
+ای‌نماد برای برخی دامنه‌ها به‌جای متاتگ، فایل خالیِ `<code>57649165.txt</code>` در ریشهٔ سایت می‌خواهد که از `https://nobatesalamat.ir/57649165.txt` با کد ۲۰۰ در دسترس باشد:
+
+- فایل: `public/57649165.txt` (خالی، در گیت نگه داشته می‌شود)
+- مسیر پشتیبان: `routes/web.php` → `GET /57649165.txt` پاسخ خالی ۲۰۰ می‌دهد
+- بررسی: `curl -I https://nobatesalamat.ir/57649165.txt` باید `200` بدهد
+
 ## متاتگ ای‌نماد (تأیید نماد اعتماد)
 
 در `<head>` همهٔ صفحات عمومی (از جمله صفحهٔ اصلی) این خط چاپ می‌شود:
